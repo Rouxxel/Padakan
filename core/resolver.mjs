@@ -79,7 +79,9 @@ export function buildManifest({ task, proposal, settings, registry = REGISTRY, s
   // A Linux target may run on a Devin Outpost pool named in DEVIN_PLATFORM; other targets need their own platform.
   const pool = settings.PADAKAN_SANDBOX_PROVIDER === 'devin' && settings.DEVIN_PLATFORM && !['linux', 'macos', 'windows'].includes(settings.DEVIN_PLATFORM);
   const platform = kit.platform === 'linux' && pool ? settings.DEVIN_PLATFORM : kit.platform;
-  const skills = [...new Set([...registry.always.skills, ...kit.skills, ...proposal.extra_skills, ...(settings.ENTIRE_ENABLED ? ['entire-context'] : [])])].sort();
+  // entire-context only when Entire is on, whatever the model proposed.
+  const extra = proposal.extra_skills.filter((x) => x !== 'entire-context' || settings.ENTIRE_ENABLED);
+  const skills = [...new Set([...registry.always.skills, ...kit.skills, ...extra, ...(settings.ENTIRE_ENABLED ? ['entire-context'] : [])])].sort();
   const missingSkills = skills.filter((s) => !skillsAvailable.includes(s));
   if (missingSkills.length) throw new ResolverError(`skills not shipped with the plugin: ${missingSkills.join(', ')}`);
 
@@ -179,6 +181,7 @@ export function systemOneQuestions({ settings, registry = REGISTRY }) {
     },
   };
   for (const skill of registry.optional_skills) {
+    if (skill === 'entire-context') continue; // added by buildManifest when ENTIRE_ENABLED, never chosen
     questions[`skill:${skill}`] = { type: 'noul', instructions: SKILL_QUESTION[skill] || `Does this task need the ${skill} skill?` };
   }
   for (const [step, { required }] of Object.entries(registry.steps)) {
@@ -199,7 +202,7 @@ export async function systemOneProposal({ task, prd = '', settings, client, regi
     prd: prd.slice(0, 12_000),
   };
   const { answers, usage, model } = await client.systemOne({ state, questions: systemOneQuestions({ settings, registry }) });
-  const extra = registry.optional_skills.filter((s) => answers[`skill:${s}`].noul >= 0.5);
+  const extra = registry.optional_skills.filter((s) => answers[`skill:${s}`]?.noul >= 0.5);
   const steps = Object.entries(registry.steps).filter(([step, { required }]) => required || answers[`step:${step}`].noul >= 0.5).map(([step]) => step);
   const estimates = steps.map((step) => {
     const unit = stepUnit(step, settings);

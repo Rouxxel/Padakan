@@ -101,7 +101,8 @@ describe('the resolver on System One', () => {
     const q = capture[0].body.questions;
     assert.equal(q.target.type, 'choice');
     assert.deepEqual(Object.keys(q.target.criteria), Object.keys(REGISTRY.targets));
-    for (const s of REGISTRY.optional_skills) assert.equal(q[`skill:${s}`].type, 'noul');
+    for (const s of REGISTRY.optional_skills.filter((x) => x !== 'entire-context')) assert.equal(q[`skill:${s}`].type, 'noul');
+    assert.equal(q['skill:entire-context'], undefined, 'entire-context is never chosen by the model');
     for (const [step, { required }] of Object.entries(REGISTRY.steps)) {
       assert.equal(q[`cost:${step}`].type, 'score');
       assert.equal(!!q[`step:${step}`], !required, `only optional steps get a yes/no question (${step})`);
