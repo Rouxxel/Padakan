@@ -3,7 +3,9 @@
 # Padakan
 
 **Autonomous development you can trust.**
-A Claude Code plugin that lets coding agents plan, fix, verify and ship on their own, and only lets a change reach production once the system has proven it safe.
+A Claude Code plugin that lets coding agents plan, build, verify and ship on their own, and only lets a change reach production once the system has proven it safe.
+
+**[inloop-nine.vercel.app](https://inloop-nine.vercel.app)** · the product page
 
 [![Claude Code plugin](https://img.shields.io/badge/Claude_Code-plugin-D97757?style=for-the-badge&logo=anthropic&logoColor=white)](https://docs.claude.com/en/docs/claude-code)
 [![Node.js 22](https://img.shields.io/badge/Node.js-22-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org)
@@ -16,6 +18,7 @@ A Claude Code plugin that lets coding agents plan, fix, verify and ship on their
 [![Entire](https://img.shields.io/badge/Context-Entire-111827?style=for-the-badge)](https://entire.io)
 [![OKF](https://img.shields.io/badge/Docs-Open_Knowledge_Format-4285F4?style=for-the-badge)](https://cloud.google.com/blog/products/data-analytics/how-the-open-knowledge-format-can-improve-data-sharing)
 <br>
+[![Website](https://img.shields.io/badge/website-inloop--nine.vercel.app-FF5A1F?style=flat-square)](https://inloop-nine.vercel.app)
 [![Status](https://img.shields.io/badge/status-in_development-2563EB?style=flat-square)](#status)
 [![Tests](https://img.shields.io/badge/tests-node_--test-16A34A?style=flat-square)](test/)
 [![Dependencies](https://img.shields.io/badge/dependencies-0-16A34A?style=flat-square)](package.json)
@@ -104,6 +107,7 @@ Then, in Claude Code with the plugin installed: `/padakan:onboard`, `/padakan:pl
 
 | You want | Read |
 |---|---|
+| The product page | [inloop-nine.vercel.app](https://inloop-nine.vercel.app) |
 | A visual walkthrough | [documentation/tech_docs/blueprint.html](documentation/tech_docs/blueprint.html) (open in a browser) |
 | The architecture | [documentation/tech_docs/ARCHITECTURE.md](documentation/tech_docs/ARCHITECTURE.md) |
 | The pipeline, animated | [documentation/tech_docs/diagrams/pipeline-animated.svg](documentation/tech_docs/diagrams/pipeline-animated.svg) |
