@@ -1,3 +1,11 @@
+---
+type: Reference
+title: APIs, frameworks and tools
+description: Every external service, framework and tool Padakan uses, what it does for us, and where it is configured.
+tags: [infrastructure, tools]
+timestamp: 2026-10-18T00:00:00Z
+---
+
 # APIs, frameworks and tools
 
 Every external service, framework and tool Padakan uses, what it does for us, and where it is configured. Settings are environment variables (see `../tech_docs/PLUGIN-STRUCTURE.md` §5).

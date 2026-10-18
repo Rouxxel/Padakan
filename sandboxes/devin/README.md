@@ -11,7 +11,7 @@ resource: https://docs.devin.ai/api-reference/overview
 
 Every Padakan tree is one Devin session in a fresh VM booted from the organization's snapshot. Devin is the agent: Padakan drives it only through the API (prompt, messages, structured output, attachments). There is no shell, no file push and no herdr inside, so the shell verbs (`bootstrap`, `seed`, `exec`, `push`, `pull`, `attach`) are not supported and throw `UnsupportedVerb`.
 
-Design and acceptance tests: [IMPLEMENTATION-DEVIN-COSTGATE.md](../../documentation/tech_docs/IMPLEMENTATION-DEVIN-COSTGATE.md). API research and the differences found against the API reference: [DEVIN.md](../../documentation/infrastructure/DEVIN.md).
+Design and acceptance tests: `documentation/tech_docs/IMPLEMENTATION-DEVIN-COSTGATE.md`. API research and the differences found against the API reference: `documentation/infrastructure/DEVIN.md`.
 
 ## Setup
 

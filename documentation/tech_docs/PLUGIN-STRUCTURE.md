@@ -1,3 +1,11 @@
+---
+type: Plan
+title: Padakan plugin file structure
+description: How the plugin is laid out on disk, the records folder next to the repo, every .env setting and the sandbox provider contract.
+tags: [architecture, plugin, structure]
+timestamp: 2026-10-18T00:00:00Z
+---
+
 # Padakan plugin: file structure plan
 
 Status: plan, not built. Default language: English. Derived from `ARCHITECTURE.md` plus a read-only analysis of two existing setups: the `daytonatree` skill (orchestrator behavior, sandbox lifecycle, records kept outside the repo) and the `inloop` plugin (plugin conventions, sibling state folder, venue abstraction, hooks, tests).

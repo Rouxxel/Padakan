@@ -20,3 +20,8 @@ jobs:
       - run: npm test
       - name: Templates are valid OKF
         run: node core/okf.mjs --template templates
+      - name: Documentation and guides are valid OKF
+        # sandboxes/daytona/remote/CLAUDE-*.md are blocks pasted into a tree's CLAUDE.md, not documents.
+        run: >-
+          node core/okf.mjs documentation orchestrator/RULES.md skills/CATALOG.md
+          sandboxes/README.md sandboxes/devin/README.md sandboxes/daytona/README.md test/README.md
