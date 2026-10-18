@@ -31,7 +31,7 @@ Padakan solves it with the system around the agent. The agent is a black box tha
 
 | | |
 |---|---|
-| **One human gate, up front** | The human approves the PRD, the task plan, the tools each agent gets, the budget and the brand once. After that nothing asks a question, unless a step would break the budget. |
+| **One human gate, up front** | The human approves the PRD, the task plan, the budget and the brand once. A decision model, not the human, picks the tools each agent gets. After that nothing asks a question, unless a step would break the budget. |
 | **The orchestrator only decides** | It decides, dispatches, merges, deploys and records. Sub-agents do all other work and return one line each, so the orchestrator stays fast over long runs. |
 | **One sandbox per task** | Each agent works in its own Daytona sandbox or Devin session, watched live in herdr. |
 | **Proven, not claimed** | Every change is proven twice, by its tests and live against the running app. The full suite and the critical-flow e2e suite stay green, and deterministic diff inspection confirms the change stays within its limits and touches no protected path, secret or unapproved dependency. |

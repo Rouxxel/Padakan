@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // padakan <step> [args]: run one orchestrator lifecycle step and print its result line last.
-// Steps: init, doctor, plant, attach, brief, poll, verify, evidence, merge, retire, recycle, status, ls
+// Steps: init, gate, doctor, plant, attach, brief, poll, verify, evidence, merge, retire, recycle, status, ls
 
 import { buildContext } from '../orchestrator/lib/context.mjs';
 import { STEPS } from '../orchestrator/steps.mjs';

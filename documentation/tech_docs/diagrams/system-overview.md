@@ -25,7 +25,6 @@ flowchart LR
         Approved -- yes --> Tasks["Tasks<br/>PRD attached as context"]
         Tasks -- sync --> Linear(["Linear issues"])
         Tasks -- per task --> Resolver["Capability resolver<br/>Nemotron on Nebius"]
-        Resolver -. manifest for review .-> HI
     end
 
     Registry[("Capability registry<br/>verify kits by target")] -- pick --> Resolver
@@ -65,7 +64,6 @@ flowchart LR
     Approved -- no --> HI["HI · user"] -- revise --> PRD
     Approved -- yes --> Tasks["Tasks<br/>PRD attached as context"] -- sync --> Linear(["Linear issues"])
     Tasks -- per task --> Resolver["Capability resolver<br/>in: PRD tech stack + task<br/>out: manifest + cost estimate"]
-    Resolver -. manifest for review .-> HI
 ```
 
 | Step | Detail |
@@ -81,9 +79,10 @@ flowchart LR
 
 1. approve the PRD (architecture, tech stack, security)
 2. approve the task plan and its user stories
-3. review each capability manifest: the tools every agent gets
-4. set the budget: caps per run, task and step
-5. approve the brand file (logo, palette, type, voice)
+3. set the budget: caps per run, task and step
+4. approve the brand file (logo, palette, type, voice)
+
+The tools each task gets are chosen by the capability resolver (a decision model), not by the human.
 
 After this gate the human is asked again only if a step breaks the budget.
 
