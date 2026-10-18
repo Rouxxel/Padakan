@@ -7,7 +7,7 @@ import { existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { checkProvider } from '../sandboxes/contract.mjs';
-import { decisionEndpoint, decisionProblem } from '../core/models.mjs';
+import { decisionEndpoint, decisionProblem, decisionProvider, decisionModel } from '../core/models.mjs';
 
 const run = promisify(execFile);
 const PLUGIN = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -69,7 +69,7 @@ export async function doctor(ctx, { probe = defaultProbe } = {}) {
   }
   // The resolver and triage models: needed by resolve and the monitor loop, not by the build steps.
   const problem = decisionProblem(s);
-  add('decision-model', problem ? 'warn' : 'ok', problem ? `${problem} (resolve and triage need it)` : `${decisionEndpoint(s).baseUrl} (${s.PADAKAN_RESOLVER_MODEL})`);
+  add('decision-model', problem ? 'warn' : 'ok', problem ? `${problem} (resolve and triage need it)` : `${decisionProvider(s)} ${decisionEndpoint(s).baseUrl} (${decisionModel(s, 'resolver')})`);
 
   const claude = await probe('claude', ['--version']);
   add('claude', claude.ok ? 'ok' : 'warn', claude.out);

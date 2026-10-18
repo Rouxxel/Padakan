@@ -110,11 +110,109 @@ export function buildManifest({ task, proposal, settings, registry = REGISTRY, s
 }
 
 export async function resolve({ task, prd = '', settings, client, registry = REGISTRY, skillsAvailable, now }) {
+  if (client.kind === 'systemone') {
+    const { proposal, usage, model } = await systemOneProposal({ task, prd, settings, client, registry });
+    return { manifest: buildManifest({ task, proposal, settings, registry, skillsAvailable, model, now }), usage };
+  }
   const { system, user } = buildPrompt({ task, prd, settings, registry });
   const model = settings.PADAKAN_RESOLVER_MODEL;
   const { data, usage } = await client.chatJson({ model, system, user, schema: proposalSchema(registry), name: 'capability_manifest' });
   const manifest = buildManifest({ task, proposal: data, settings, registry, skillsAvailable, model, now });
   return { manifest, usage };
+}
+
+// ── System One (TypeSafe Jev): the same proposal, asked as typed questions ─────────────────────
+
+const TARGET_MEANING = {
+  web: 'a change a user sees in a web browser (pages, components, styles, client-side behaviour)',
+  ios: 'an iPhone or iPad app (Swift, Xcode)',
+  android: 'an Android app (Kotlin, Gradle)',
+  backend: 'server, API, CLI, library or data code with no user interface of its own',
+};
+const SKILL_QUESTION = {
+  'entire-context': 'Would this task benefit from searching past agent sessions and the code graph to understand why existing code is the way it is?',
+  'feature-docs': 'Does this task create or substantially change a critical user-facing feature that needs its own feature documents?',
+  'triage-categories': 'Does this task involve sorting or classifying production errors or logs?',
+  'cost-gate': 'Does this task involve estimating, tracking or reporting spend?',
+};
+const STEP_QUESTION = {
+  video: 'Should the change be proven with a screen recording of the app?',
+  'device-probe': 'Does proving this change need a real or emulated mobile device?',
+  'browser-matrix': 'Does this change need checking across several browsers?',
+  'e2e-staging': 'Does this change touch a critical end-to-end flow that should be run on staging?',
+};
+// Cost buckets per unit: Jev rates a step on this ladder and the range comes from its probabilities.
+export const BUCKETS = {
+  tokens: [50_000, 150_000, 400_000, 1_000_000, 2_500_000],
+  acu: [1, 3, 6, 12, 25],
+  ci_minute: [1, 3, 8, 20, 45],
+  device_minute: [1, 3, 8, 20, 45],
+};
+const DEVICE_STEPS = new Set(['video', 'device-probe']);
+
+export function stepUnit(step, settings) {
+  if (step === 'build') return settings.PADAKAN_SANDBOX_PROVIDER === 'devin' ? 'acu' : 'tokens';
+  return DEVICE_STEPS.has(step) ? 'device_minute' : 'ci_minute';
+}
+
+// low / likely / high: the buckets where the cumulative probability first reaches 10 %, 50 % and 90 %.
+export function rangeFromScore(probabilities, buckets) {
+  const p = buckets.map((_, i) => Number(probabilities?.[String(i)] ?? 0));
+  const total = p.reduce((a, b) => a + b, 0) || 1;
+  const at = (q) => {
+    let acc = 0;
+    for (let i = 0; i < p.length; i++) {
+      acc += p[i] / total;
+      if (acc >= q - 1e-9) return buckets[i];
+    }
+    return buckets.at(-1);
+  };
+  return { low: at(0.1), likely: at(0.5), high: at(0.9) };
+}
+
+export function systemOneQuestions({ settings, registry = REGISTRY }) {
+  const questions = {
+    target: {
+      type: 'choice',
+      instructions: 'Which kind of software does `task` change? Use `prd` for the tech stack.',
+      criteria: Object.fromEntries(Object.keys(registry.targets).map((t) => [t, TARGET_MEANING[t] || null])),
+    },
+  };
+  for (const skill of registry.optional_skills) {
+    questions[`skill:${skill}`] = { type: 'noul', instructions: SKILL_QUESTION[skill] || `Does this task need the ${skill} skill?` };
+  }
+  for (const [step, { required }] of Object.entries(registry.steps)) {
+    if (!required) questions[`step:${step}`] = { type: 'noul', instructions: STEP_QUESTION[step] || `Does this task need the optional "${step}" step?` };
+    const unit = stepUnit(step, settings);
+    questions[`cost:${step}`] = {
+      type: 'score',
+      instructions: `How much ${unit === 'tokens' ? 'agent work (model tokens)' : unit === 'acu' ? 'agent work (Devin ACUs)' : unit === 'device_minute' ? 'device time (minutes)' : 'CI time (minutes)'} will the "${step}" step of this task take?`,
+      criteria: BUCKETS[unit].map((v) => `about ${v.toLocaleString('en-US')} ${unit}`),
+    };
+  }
+  return questions;
+}
+
+export async function systemOneProposal({ task, prd = '', settings, client, registry = REGISTRY }) {
+  const state = {
+    task: { key: task.key, title: task.title || '', description: task.description || '', acceptance_criteria: task.criteria || '' },
+    prd: prd.slice(0, 12_000),
+  };
+  const { answers, usage, model } = await client.systemOne({ state, questions: systemOneQuestions({ settings, registry }) });
+  const extra = registry.optional_skills.filter((s) => answers[`skill:${s}`].noul >= 0.5);
+  const steps = Object.entries(registry.steps).filter(([step, { required }]) => required || answers[`step:${step}`].noul >= 0.5).map(([step]) => step);
+  const estimates = steps.map((step) => {
+    const unit = stepUnit(step, settings);
+    return { step, unit, ...rangeFromScore(answers[`cost:${step}`].probabilities, BUCKETS[unit]) };
+  });
+  const t = answers.target;
+  const rationale = [
+    `System One (${model}): target ${t.choice} at confidence ${Number(t.confidence ?? 0).toFixed(2)}`,
+    extra.length ? `extra skills ${extra.join(', ')}` : 'no extra skills',
+    `optional steps ${steps.filter((s) => !registry.steps[s].required).join(', ') || 'none'}`,
+    'no dependency changes allowed (a System One model cannot name files)',
+  ].join('; ');
+  return { proposal: { target: t.choice, extra_skills: extra, allow_dependencies: [], estimates, rationale }, usage, model };
 }
 
 // One line for the orchestrator.
