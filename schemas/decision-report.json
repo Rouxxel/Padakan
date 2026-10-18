@@ -1,0 +1,25 @@
+{
+  "$comment": "Frontmatter of a cost decision report, <records>/decisions/D-nnnn.md, after numeric and boolean fields are coerced (orchestrator/decisions.mjs readDecision). The full machine data sits next to it in D-nnnn.json.",
+  "type": "object",
+  "required": ["type", "title", "description", "tags", "timestamp", "id", "task", "step", "run", "reason", "required", "status", "unit", "high_usd", "recommendation"],
+  "properties": {
+    "type": { "type": "string", "enum": ["Decision Report"] },
+    "title": { "type": "string" },
+    "description": { "type": "string" },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "timestamp": { "type": "string" },
+    "id": { "type": "string", "pattern": "^D-[0-9]{4,}$" },
+    "task": { "type": "string" },
+    "step": { "type": "string", "pattern": "^[a-z0-9][a-z0-9:._-]*$" },
+    "tree": { "type": "string" },
+    "run": { "type": "string" },
+    "reason": { "type": "string", "enum": ["task-cap", "step-cap", "run-cap", "session-cap-hit", "cap-below-low", "no-price"] },
+    "required": { "type": "boolean" },
+    "status": { "type": "string", "enum": ["open", "answered"] },
+    "unit": { "type": "string" },
+    "high_usd": { "type": ["number", "null"], "minimum": 0 },
+    "recommendation": { "type": "string", "pattern": "^(approve|skip|raise|abort|cheaper:[a-z0-9][a-z0-9-]*)$" },
+    "alternatives": { "type": "array", "items": { "type": "string" } }
+  },
+  "additionalProperties": true
+}

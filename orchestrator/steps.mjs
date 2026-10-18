@@ -19,6 +19,7 @@ import { collect } from '../core/collect-logs.mjs';
 import { triage } from '../core/triage.mjs';
 import { buildPack, renderMarkdown, renderHtml, ITEMS } from '../core/report.mjs';
 import { adapterFor, gatedDeploy } from '../core/deploy.mjs';
+import { DECISION_STEPS } from './decisions.mjs';
 
 const ok = (line, details) => ({ line, code: 0, details });
 const fail = (line, details) => ({ line, code: 1, details });
@@ -386,4 +387,4 @@ export async function ls(ctx) {
   return ok(`TREES=${handles.length}`, handles.map((h) => `${h.id}\t${h.provider}\t${h.state}\t${h.task || '-'}\t${h.url || h.path || '-'}`));
 }
 
-export const STEPS = { init, gate, pause, resolve, tick, deploy, rollback, plant, attach, brief, poll, verify, evidence, merge, retire, recycle, status, ls };
+export const STEPS = { init, gate, pause, resolve, tick, deploy, rollback, plant, attach, brief, poll, verify, evidence, merge, retire, recycle, status, ls, ...DECISION_STEPS };

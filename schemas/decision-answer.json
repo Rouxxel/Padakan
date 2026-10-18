@@ -1,0 +1,18 @@
+{
+  "$comment": "The human's answer to a cost decision report: <records>/decisions/D-nnnn.answer.json. Written by the orchestrator (padakan decide), never by an agent.",
+  "type": "object",
+  "required": ["id", "answer", "by", "ts", "action"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "pattern": "^D-[0-9]{4,}$" },
+    "answer": { "type": "string", "enum": ["approve", "cheaper", "skip", "raise", "abort"] },
+    "option": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "usd": { "type": "number", "minimum": 0 },
+    "by": { "type": "string" },
+    "ts": { "type": "string" },
+    "action": { "type": "string", "enum": ["run-step", "run-alternative", "skipped", "raised", "regated-run", "new-decision", "escalated"] },
+    "session_id": { "type": "string" },
+    "max_acu_limit": { "type": "integer", "minimum": 1 },
+    "next_decision": { "type": "string", "pattern": "^D-[0-9]{4,}$" }
+  }
+}
