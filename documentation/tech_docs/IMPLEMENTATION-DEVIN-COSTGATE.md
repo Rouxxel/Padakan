@@ -565,7 +565,7 @@ The implementer delivers each part with these tests passing under `node --test`.
 
 ## F. Documentation to update when this lands
 
-- `PLUGIN-STRUCTURE.md` §3, §5 and §7: **already synced** with this plan and the API reference (capability flags, Devin verbs including `raiseBudget`, Devin files, settings). Add `DEVIN_CONTINUATION_MIN_ACU` to §5 once its default is settled.
+- `PLUGIN-STRUCTURE.md` §3, §5 and §7: **already synced** with this plan and the API reference (capability flags, Devin verbs including `raiseBudget`, Devin files, settings). Keep them in step if this plan changes.
 - `ARCHITECTURE.md` §9: describe `max_acu_limit` as a hard stop and the `session-cap-hit` path.
 - `DEVIN.md`: the differences from the API reference are **already listed** in its "Differences found against the live API reference" section. After D.4, add the live results there, without rewriting the original sections.
 - `README.md`: the "watched live in herdr" line becomes "watched live in the Devin web app (or herdr for non-Devin trees)".
