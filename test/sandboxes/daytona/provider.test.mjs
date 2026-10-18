@@ -312,7 +312,7 @@ test('evidence pulls .padakan/evidence into the task folder; retire pulls the re
     await writeFile(join(p.tree, '.padakan', 'evidence', 'notes.md'), 'AC1 pass\n');
     await writeFile(join(p.tree, '.padakan', 'evidence', 'browser', 'run.webm'), 'video');
     const ev = await p.gw.evidence('pad-1', 'PAD-1');
-    assert.equal(ev.video, join('tasks', 'PAD-1', 'evidence', 'daytona', 'browser', 'run.webm'));
+    assert.equal(ev.video, 'tasks/PAD-1/evidence/daytona/browser/run.webm', 'records paths use / on every platform');
     assert.equal(await readFile(join(p.records, 'tasks', 'PAD-1', 'evidence', 'daytona', 'notes.md'), 'utf8'), 'AC1 pass\n');
 
     await writeFile(join(p.tree, '.padakan', 'record.md'), '# record\n');

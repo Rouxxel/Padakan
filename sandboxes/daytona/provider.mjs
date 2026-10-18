@@ -37,7 +37,8 @@ export const capabilities = [
 
 const PADAKAN_DIR = '.padakan';
 // base64 characters per exec: well under ARG_MAX, and under the 32k command line of Windows hosts
-const CHUNK = process.platform === 'win32' ? 24_000 : 150_000;
+// Linux caps ONE argument at 128 KiB (MAX_ARG_STRLEN), and the whole chunk travels as one sh -c argument.
+const CHUNK = process.platform === 'win32' ? 24_000 : 100_000;
 // tar on the orchestrator's machine. On Windows, Git's GNU tar reads "C:\..." as host:path, so use the
 // bsdtar Windows ships in System32 (Windows 10+), which understands drive paths.
 const LOCAL_TAR = process.platform === 'win32' ? join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'tar.exe') : 'tar';
@@ -374,7 +375,7 @@ export async function attach(ctx, handle) {
   const { session, agent } = herdrNames(ctx, handle);
   const S = q(session);
   await must(ctx, handle.id, [
-    `pgrep -f "herdr --session ${session} server" >/dev/null || (set -a; . "$HOME/.claude-env"; set +a; nohup herdr --session ${S} server > "$HOME/${PADAKAN_DIR}/herdr-server.log" 2>&1 &)`,
+    `pgrep -f "[h]erdr --session ${session} server" >/dev/null || (set -a; . "$HOME/.claude-env"; set +a; nohup herdr --session ${S} server > "$HOME/${PADAKAN_DIR}/herdr-server.log" 2>&1 &)`,
     'sleep 3',
     `herdr --session ${S} pane list 2>/dev/null | grep -q pane_id || herdr --session ${S} workspace create --cwd ${rpath(handle.path)} --label ${S} --focus >/dev/null 2>&1`,
     `herdr --session ${S} agent list 2>/dev/null | grep -q '"agent_status"' || herdr --session ${S} agent start ${q(agent)} --kind claude --pane w1:p1 --timeout 240000 -- --dangerously-skip-permissions 2>&1 | head -3`,
