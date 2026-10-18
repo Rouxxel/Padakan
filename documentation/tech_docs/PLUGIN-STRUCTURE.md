@@ -137,19 +137,18 @@ Padakan/                                  repo root = the plugin
 │   │   ├── doctor.mjs                    /self, UseDevinSessions permission, platform, ACU price set
 │   │   └── README.md                     service user, org id, platforms, ACU limits, Computer Use
 │   └── daytona/
-│       ├── provider.mjs                  create, bootstrap, seed, exec, push, pull, url, status,
-│       │                                 attach, evidence, retire, destroy
-│       ├── doctor.mjs                    claude, gh push, an MCP tool call, disk, Entire, herdr version
-│       ├── snapshot/Dockerfile           Ubuntu, Node 22, gh, git, Claude Code, herdr, Entire CLI +
-│       │                                 Entire Graph, Playwright + MCP; no secrets
+│       ├── provider.mjs                  create, bootstrap, seed, exec, push, pull, brief, attach,
+│       │                                 url, status, pause, resume, evidence, retire, destroy
+│       ├── doctor.mjs                    CLI, auth, snapshot, Claude token, gh token source, identity
+│       ├── snapshot/Dockerfile           Ubuntu, Node 22, gh, git, Claude Code, herdr,
+│       │                                 Playwright + MCP; no secrets
 │       ├── remote/
 │       │   ├── bootstrap.sh              idempotent; last line BOOTSTRAP-OK
 │       │   ├── claude-token.sh           main / fallback token switch inside the tree
+│       │   ├── CLAUDE-padakan.md         tree rules: no questions, report line, no attribution
 │       │   ├── CLAUDE-evidence.md        recording rules
-│       │   ├── CLAUDE-disk.md            disk ceiling, push early, never wipe /tmp
-│       │   ├── CLAUDE-entire.md          ask Entire before guessing
-│       │   ├── CLAUDE-prbody.md          PR body rules, no attribution
-│       │   └── BRIEF-record.md           the seven-section retire record
+│       │   └── CLAUDE-disk.md            disk ceiling, push early, never wipe /tmp
+│       └── README.md                     bake command, verbs, watching a tree
 │       └── README.md                     setup and auth-breakage table
 ├── core/                                 trust core; deterministic; unit-tested
 │   ├── gates.mjs                         proven twice, no regressions, documents valid

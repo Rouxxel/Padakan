@@ -81,6 +81,17 @@ export async function plant(ctx, args) {
   const id = treeId(key);
   const branch = branchFor(key);
   const handle = await ctx.gateway.create(id, { task: key, branch, base: opt.base || 'HEAD', ...(opt.provider ? { provider: opt.provider } : {}) });
+  // A remote sandbox gets its credentials first (seed), then its checkout (bootstrap).
+  for (const verb of ['seed', 'bootstrap']) {
+    if (!(await ctx.gateway.supports(id, verb))) continue;
+    try {
+      await ctx.gateway[verb](id);
+    } catch (e) {
+      await updateTask(ctx.records, key, { status: 'plant-failed', tree: id, branch, provider: handle.provider }, ctx.now);
+      await ctx.audit.append({ type: `tree.${verb}_failed`, task: key, tree: id, provider: handle.provider, summary: `tree ${id}: ${verb} failed` });
+      return fail(`TREE=${id} STATE=failed STEP=${verb}`, [e.message]);
+    }
+  }
   await updateTask(ctx.records, key, { status: 'planted', tree: id, branch, base: handle.base_sha || null, provider: handle.provider }, ctx.now);
   await ctx.audit.append({ type: 'tree.planted', task: key, tree: id, provider: handle.provider, summary: `tree ${id} planted on ${handle.provider}` });
   return ok(`TREE=${id} STATE=${handle.state} BRANCH=${branch}`);
