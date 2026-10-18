@@ -54,6 +54,8 @@ export const SETTINGS = [
   S('PADAKAN_TRIAGE_MODEL', 'Agents and models', 'nvidia/nemotron-3-super-120b-a12b', 'string', 'Model that triages monitor clusters.'),
   S('PADAKAN_RESOLVER_MODEL', 'Agents and models', 'nvidia/nemotron-3-super-120b-a12b', 'string', 'Model that writes capability manifests.'),
   S('PADAKAN_BUILDER_MODEL', 'Agents and models', '', 'string', 'Model for the openai-compat harness.'),
+  S('PADAKAN_DECISION_BASE_URL', 'Agents and models', '', 'url', 'OpenAI-compatible endpoint for the decision models (resolver, triage). Empty uses NEBIUS_BASE_URL; set it to use a local model server (Ollama, llama.cpp, vLLM).'),
+  S('PADAKAN_DECISION_API_KEY', 'Agents and models', '', 'string', 'API key for PADAKAN_DECISION_BASE_URL. Empty uses NEBIUS_API_KEY; a local server may need none.', { secret: true }),
   S('DEVIN_API_URL', 'Agents and models', 'https://api.devin.ai/v3', 'url', 'Devin API base URL.'),
   S('DEVIN_API_KEY', 'Agents and models', '', 'string', 'Devin service-user token (cog_…), needs UseDevinSessions.', { secret: true }),
   S('DEVIN_ORG_ID', 'Agents and models', '', 'string', 'Devin organization id (org-…).'),

@@ -1,0 +1,45 @@
+{
+  "$comment": "The capability registry: everything an agent can be given. The capability resolver chooses from this list; it cannot add anything that is not here. Catalog data, not settings.",
+  "targets": {
+    "web": {
+      "platform": "linux",
+      "mcp": ["playwright", "chrome-devtools"],
+      "cli": ["npm", "npx playwright", "lighthouse"],
+      "skills": ["verify-web", "e2e-playbook"]
+    },
+    "ios": {
+      "platform": "macos",
+      "mcp": ["mobilebuild"],
+      "cli": ["xcodebuild", "xcrun simctl"],
+      "skills": ["verify-ios"]
+    },
+    "android": {
+      "platform": "linux",
+      "mcp": ["androidbuild"],
+      "cli": ["adb", "./gradlew", "emulator"],
+      "skills": ["verify-android"]
+    },
+    "backend": {
+      "platform": "linux",
+      "mcp": [],
+      "cli": ["curl", "docker compose", "docker logs"],
+      "skills": ["verify-backend"]
+    }
+  },
+  "always": {
+    "skills": ["okf", "no-questions", "escalation", "evidence-pack"],
+    "cli": ["git", "gh"]
+  },
+  "optional_skills": ["entire-context", "feature-docs", "triage-categories", "cost-gate"],
+  "steps": {
+    "build": { "required": true },
+    "task-tests": { "required": true },
+    "suite": { "required": true },
+    "diffcheck": { "required": true },
+    "acceptance": { "required": true },
+    "video": { "required": false },
+    "device-probe": { "required": false },
+    "browser-matrix": { "required": false },
+    "e2e-staging": { "required": false }
+  }
+}

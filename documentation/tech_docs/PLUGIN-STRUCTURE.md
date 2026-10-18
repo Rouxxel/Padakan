@@ -167,7 +167,7 @@ Padakan/                                  repo root = the plugin
 │   └── harness/                          claude.mjs · devin.mjs · openai-compat.mjs
 ├── schemas/                              task, manifest, decision-report, decision-answer, audit-entry,
 │                                         triage-result, verdict, sandbox-handle
-├── registry/                             capabilities.yml, categories.yml, prices.yml (catalog data, not settings)
+├── registry/                             capabilities.json, categories.yml, prices.yml (catalog data, not settings)
 ├── templates/                            evidence-report.md/.html, brand.md, brief.md,
 │                                         decision-report.md, record.md, feature/
 ├── ci/                                   docs gate, e2e twice per change, cron
