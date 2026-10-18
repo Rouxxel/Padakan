@@ -127,10 +127,19 @@ Padakan/                                  repo root = the plugin
 │   ├── contract.mjs                      shared validation (ids, handles, secret filters)
 │   ├── local/
 │   │   └── provider.mjs                  git worktree; for development and the Mac device host
-│   ├── devin/                            DEFAULT provider
-│   │   ├── provider.mjs                  Devin API v3: sessions, messages, attachments, archive
+│   ├── devin/                            DEFAULT provider (API only: no shell, no herdr)
+│   │   ├── provider.mjs                  verbs + `capabilities` list (see §7)
+│   │   ├── client.mjs                    HTTP client for https://api.devin.ai/v3: sessions (create, get,
+│   │   │                                 list, messages, attachments list, archive, terminate, tags),
+│   │   │                                 org-level attachment upload, /self; retries 429/5xx, parses
+│   │   │                                 ProblemDetail, never logs the key
+│   │   ├── state.mjs                     Devin status + status_detail → tree state
+│   │   ├── answers.mjs                   rule-based replies when a session waits for the user
+│   │   ├── prompt.mjs                    session prompt rendered from the brief
+│   │   ├── schemas/report.json           structured output (draft 7, no $ref): the CI= PR= ACS=
+│   │   │                                 EVIDENCE= BLOCKED= report, plus the seven-section record
 │   │   ├── blueprint.yaml                template for the repo's .devin/blueprint.yaml (verify kit, knowledge)
-│   │   ├── schemas/report.json           structured output: the CI= PR= ACS= EVIDENCE= BLOCKED= report
+│   │   ├── doctor.mjs                    /self, UseDevinSessions permission, platform, ACU price set
 │   │   └── README.md                     service user, org id, platforms, ACU limits, Computer Use
 │   └── daytona/
 │       ├── provider.mjs                  create, bootstrap, seed, exec, push, pull, url, status,
@@ -162,9 +171,9 @@ Padakan/                                  repo root = the plugin
 │   ├── docs-gate.mjs                     CI gate for the five feature docs
 │   ├── okf.mjs                           OKF validator: type present, ISO timestamp, links resolve
 │   └── harness/                          claude.mjs · devin.mjs · openai-compat.mjs
-├── schemas/                              task, manifest, decision-report, audit-entry,
+├── schemas/                              task, manifest, decision-report, decision-answer, audit-entry,
 │                                         triage-result, verdict, sandbox-handle
-├── registry/                             capabilities.yml, categories.yml (catalog data, not settings)
+├── registry/                             capabilities.yml, categories.yml, prices.yml (catalog data, not settings)
 ├── templates/                            evidence-report.md/.html, brand.md, brief.md,
 │                                         decision-report.md, record.md, feature/
 ├── ci/                                   docs gate, e2e twice per change, cron
@@ -173,7 +182,8 @@ Padakan/                                  repo root = the plugin
 │   ├── infrastructure/                   TOOLS.md: every API, framework and tool used
 │   └── repo_requirements.md              what the jury needs from the repo
 ├── README.md                             what it is, setup and install, links into documentation/
-└── test/                                 node --test; helpers with mock daytona and herdr CLIs
+└── test/                                 node --test; helpers with mock daytona and herdr CLIs and a
+                                          mock Devin v3 HTTP server
 ```
 
 ## 4. Records folder outside the repo
@@ -239,11 +249,15 @@ A marketplace update replaces the plugin folder, so values kept only in the plug
 | | `NEBIUS_API_KEY` · `NEBIUS_BASE_URL` | · `https://api.tokenfactory.nebius.com/v1/` | OpenAI-compatible models |
 | | `PADAKAN_TRIAGE_MODEL` · `PADAKAN_RESOLVER_MODEL` | `nvidia/nemotron-3-super-120b-a12b` | decision models (structured output) |
 | | `PADAKAN_BUILDER_MODEL` | | model for the `openai-compat` harness |
-| | `DEVIN_API_KEY` · `DEVIN_ORG_ID` | | `devin` provider: service user token (`cog_…`) and org id |
-| | `DEVIN_MAX_ACU` | | per-session ACU cap; also counted by the cost gate |
-| | `DEVIN_PLATFORM` | `linux` | `linux` · `macos` · `windows`; the resolver can override per task |
+| | `DEVIN_API_URL` | `https://api.devin.ai/v3` | Devin API base URL |
+| | `DEVIN_API_KEY` · `DEVIN_ORG_ID` | | `devin` provider: service user token (`cog_…`, needs `UseDevinSessions`) and org id |
+| | `DEVIN_MAX_ACU` | | hard ceiling for any session's `max_acu_limit`, whatever the budget allows; the cost gate sets the actual value per session |
+| | `DEVIN_PLATFORM` | `linux` | `linux` · `macos` · `windows`, or an Outpost pool name; the resolver can override per task |
+| | `DEVIN_MODE` | | optional `devin_mode` (`normal` · `fast` · `lite` · `ultra` · `fusion`); empty uses the org default; affects cost |
 | | `DEVIN_BYPASS_APPROVAL` | `true` | no approval prompts inside sessions |
 | | `DEVIN_PLAYBOOK_ID` | | optional playbook with Padakan's standing instructions |
+| | `DEVIN_POLL_SECONDS` | `30` | how often a session is polled |
+| | `DEVIN_CONTINUATION_MIN_ACU` | `2` | smallest raise worth a continuation session (`raiseBudget`) |
 | Git | `GH_TOKEN_SOURCE` · `GH_PAT` | `host` · | GitHub token for trees |
 | | `GIT_AUTHOR_NAME` · `GIT_AUTHOR_EMAIL` | required | commit identity, no AI attribution |
 | Context | `ENTIRE_ENABLED` | `false` | optional; agents use Entire Graph (local) and session capture |
@@ -252,6 +266,7 @@ A marketplace update replaces the plugin folder, so values kept only in the plug
 | Gates | `PADAKAN_PROTECTED_PATHS` | `.github/,infra/,**/*.lock` | diff inspection refuses these |
 | | `PADAKAN_MAX_DIFF_LINES` · `PADAKAN_MAX_DIFF_FILES` | `60` · `3` | "small and localized" |
 | Cost | `PADAKAN_BUDGET_RUN_USD` · `PADAKAN_BUDGET_TASK_USD` · `PADAKAN_BUDGET_STEP_USD` | | caps; over a cap the tree pauses and a decision report is sent |
+| | `PADAKAN_DEVIN_USD_PER_ACU` | | **required** with the `devin` provider: the team's real ACU price; the gate pauses rather than guess |
 | Monitor | `PADAKAN_WATCH_INTERVAL_MIN` | `15` | cron tick |
 | | `PADAKAN_LOG_SOURCES` | `docker` | `docker` · file paths · URL |
 | Deploy | `PADAKAN_DEPLOY_TARGET` | `simulated` | `simulated` · `railway` · `vercel` |
@@ -267,21 +282,31 @@ The numbers above are placeholders to settle when each module is built.
 
 ## 7. Sandbox provider contract
 
-`sandboxes/index.mjs` loads `sandboxes/${PADAKAN_SANDBOX_PROVIDER}/provider.mjs`. Every provider exports `name` and these async verbs; `test/sandbox-contract.test.mjs` runs the same suite against each.
+`sandboxes/index.mjs` loads `sandboxes/${PADAKAN_SANDBOX_PROVIDER}/provider.mjs`. Every provider exports `name`, a `capabilities` array listing the verbs it supports, and those verbs as async functions. `test/sandbox-contract.test.mjs` runs the same suite against each provider, for the verbs that provider declares. Calling an undeclared verb throws `UnsupportedVerb`; it never fails silently. The gateway also enforces `PADAKAN_MAX_TREES` by counting live handles.
 
-| Verb | Contract |
-|---|---|
-| `create(id, {repo, branch, base})` | claim handle first, delete it on failure; pin base to a full SHA; refuse if local commits are unpushed |
-| `bootstrap(id)` | idempotent; success only on a final `BOOTSTRAP-OK` |
-| `seed(id)` | secrets per tree by exec; tree `settings.json` (model, attribution off); assemble tree `CLAUDE.md` blocks |
-| `exec(id, cmd)` | one string; exit code from the remote `run.done` file |
-| `push` · `pull` | refuse credential-shaped files; chunked base64 |
-| `attach(id)` | start the agent and return where to watch it: the Devin session URL, or a herdr pane for `daytona` and `local` |
-| `url(id, port)` | preview URL |
-| `evidence(id, key)` | serve, assert the bundle downloads, pull into `<records>/tasks/<KEY>/evidence/` |
-| `retire(id, key)` | brief the record, poll until seven sections, pull it, then `destroy` |
-| `destroy(id, {force})` | refuse when uncommitted or unpushed work exists unless forced |
-| `status(id)` | ready · stopped · provisioning · gone |
+Devin is API-only, so it does not declare the shell verbs (`bootstrap`, `seed`, `exec`, `push`, `pull`). It adds `message`, `pause`, `resume`, `spend` and `raiseBudget`.
+
+| Verb | Contract | `daytona` | `local` | `devin` (Devin API v3) |
+|---|---|---|---|---|
+| `create(id, {repo, branch, base, …})` | claim handle first, delete it on failure; pin base to a full SHA; refuse if local commits are unpushed; the cost gate runs before anything is spent | ✓ | ✓ | upload brief (`POST /attachments`), then `POST /sessions` with `max_acu_limit` from the cost gate, `resumable: true`, `bypass_approval`, `structured_output_schema`, tags `padakan` · `task:<KEY>`; store `session_id` and `url` |
+| `bootstrap(id)` | idempotent; success only on a final `BOOTSTRAP-OK` | ✓ | | not supported (the org snapshot from blueprints does this) |
+| `seed(id)` | secrets per tree by exec; tree `settings.json` (model, attribution off); assemble tree `CLAUDE.md` blocks | ✓ | ✓ | not supported (secrets via `secret_ids` at create; rules via playbook or the repo's `AGENTS.md`) |
+| `exec(id, cmd)` | one string; exit code from the remote `run.done` file | ✓ | ✓ | not supported |
+| `push` · `pull` | refuse credential-shaped files; chunked base64 | ✓ | ✓ | not supported (files travel as attachments) |
+| `brief(id, path)` | deliver the OKF brief | ✓ | ✓ | at create: `attachment_urls`; later: `POST /sessions/{id}/messages` |
+| `attach(id)` | start the agent and return where to watch it | herdr pane | herdr pane | the session `url` (Devin web app) |
+| `url(id, port)` | preview URL | ✓ | ✓ | session `url` |
+| `status(id)` | tree state: ready · working · waiting · paused · done · failed · gone | ✓ | ✓ | `GET /sessions/{id}`; `status` + `status_detail` mapped by `state.mjs`; "done" only once the PR's head commit is on the remote |
+| `message(id, text)` | send a follow-up or a rule-based answer | | | `POST /sessions/{id}/messages` (resumes a sleeping session) |
+| `pause(id)` | stop spending, keep the work | stop sandbox | | `POST /sessions/{id}/archive` (sleeps; reversible) |
+| `resume(id, text)` | continue a paused tree | start sandbox | | `POST /sessions/{id}/messages` |
+| `spend(id)` | units consumed so far, for the cost ledger | | | `acus_consumed` from `GET /sessions/{id}` |
+| `raiseBudget(id, {cap})` | continue a capped tree under a higher cap approved at the cost gate | raise limits if the provider allows | n/a | the API cannot change `max_acu_limit` on a live session, so: archive the capped session, create a **continuation session** on the same branch with the new cap and a "continue from the remote branch" brief, and link the old `session_id` in the handle (`previous_session_ids`); spend is summed across both |
+| `evidence(id, key)` | collect the bundle into `<records>/tasks/<KEY>/evidence/` | serve and pull | copy | `GET /sessions/{id}/attachments`, download the newest video; none → `{video:null}` (a failed item unless our own recording covers it) |
+| `retire(id, key)` | get the seven-section record, pull it, then end the tree | brief, poll, pull, `destroy` | ✓ | message asking for `record` in the structured output; write `record.md`; then archive |
+| `destroy(id, {force})` | refuse when unpushed work exists unless forced | ✓ | ✓ | refuse unless the PR head is on the remote; then `DELETE /sessions/{id}` (terminate, cannot be resumed) |
+
+Note on ids: the Devin API returns the id as `session_id` (prefix `devin-`), and its URL paths name the same slot `{devin_id}`. Details and the other differences from the first research: `documentation/infrastructure/DEVIN.md`, "Differences found against the live API reference".
 
 ## 8. Settled and open
 

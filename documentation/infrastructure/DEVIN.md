@@ -95,6 +95,30 @@ The trade-off: in a Devin session **Devin is the agent**. We drive it through th
 | `DEVIN_BYPASS_APPROVAL` | `true` | no approval prompts inside sessions |
 | `DEVIN_PLAYBOOK_ID` | | optional playbook carrying Padakan's standing instructions |
 
+## Differences found against the live API reference (2026-10-18)
+
+The sections above are kept as first written. A later check against the v3 API reference (OpenAPI pages for each endpoint) found these differences. Where they disagree, **the API reference wins**, and `tech_docs/PLUGIN-STRUCTURE.md` and `tech_docs/IMPLEMENTATION-DEVIN-COSTGATE.md` follow it.
+
+| # | Topic | What this document says above | What the API reference says | Impact on Padakan |
+|---|---|---|---|---|
+| 1 | Session id | Paths use `{devin_id}`; the id field is not named | The create and get responses return **`session_id`** (prefix `devin-`). The path parameter is *named* `devin_id`, but its value is that `session_id` | Store `session_id` in the handle and put it in the `{devin_id}` path slot |
+| 2 | Uploading a brief | `POST …/sessions/{devin_id}/attachments` to upload | Uploading is **org-level**: `POST /v3/organizations/{org_id}/attachments` (multipart/form-data). The session-level `…/sessions/{devin_id}/attachments` is **GET only** (list) | Upload the brief first, then pass its URL in `attachment_urls` when creating the session |
+| 3 | Ending a session | "`POST …/archive`, terminate, `DELETE`" (reads as three actions) | There are **two**. **Archive** (`POST …/sessions/{devin_id}/archive`) sets `is_archived: true` and puts the session to sleep; a message resumes it, and `POST …/unarchive` reverses it. **Terminate** (`DELETE …/sessions/{devin_id}`, optional `?archive=true`) is final and cannot be resumed | `pause` = archive; `destroy` = terminate |
+| 4 | Session states | Mentions `status` and `status_detail` without values | `status`: `new`, `claimed`, `running`, `exit`, `error`, `suspended`, `resuming`. `status_detail` when running: `working`, `waiting_for_user`, `waiting_for_approval`, `finished`. When suspended: `inactivity`, `user_request`, `usage_limit_exceeded`, `out_of_credits`, `out_of_quota`, `no_quota_allocation`, `payment_declined`, `org_usage_limit_exceeded`, `user_usage_limit_exceeded`, `total_session_limit_exceeded`, `contract_expired`, `error` | The provider maps every value to a tree state (implementation plan A.5). `usage_limit_exceeded` is how the cost gate learns a session cap was hit |
+| 5 | Raising a session's ACU cap | `max_acu_limit` per session; nothing on changing it | `max_acu_limit` is set only on **create**. No endpoint updates a running session (there is no PATCH on sessions) | "Raise the budget" cannot edit the session. Padakan adds a `raiseBudget` capability that archives the capped session and starts a **continuation session** on the same branch with the new cap (implementation plan B.6) |
+| 6 | Create fields | Lists `prompt`, `repos`, `platform`, `playbook_id`, `knowledge_ids`, `secret_ids`, `session_secrets`, `tags`, `title`, `max_acu_limit`, `bypass_approval`, `resumable`, `attachment_urls`, `security_profile` | Also has `devin_mode` (`normal`, `fast`, `lite`, `ultra`, `fusion`, and others; `fast` is about 2x faster and 4x more expensive), `child_playbook_id`, `session_links` and `create_as_user_id`. `resumable` defaults to `true`. Only `prompt` is required | `devin_mode` affects cost, so it is a setting (`DEVIN_MODE`) and part of the estimate. `resumable` must stay `true` for pause and resume |
+| 7 | `platform` | `linux` · `macos` · `windows` | Also accepts an **Outpost** pool name (self-hosted machines). An unknown value returns `400` with a body listing the valid platforms and pools | Show that `400` body to the user as is during onboarding |
+| 8 | Structured output | `structured_output_schema` and `structured_output_required` | `structured_output_required` **defaults to `true`**: the agent must call `provide_structured_output` with `is_final=true` before its turn ends. The schema must be self-contained (no external `$ref`) | Keep `report.json` free of `$ref` |
+| 9 | Android | "Android emulator support not confirmed" (**verify**) | The docs now have an Android emulator page (`onboard-devin/environment/android-emulation`): full emulator in the session, blueprint setup, `adb`, Computer Use and recordings | Still needs one live test; if it works, the Mac-host fallback for Android can go |
+| 10 | Permissions | Service-user token `cog_…` | Creating sessions needs the **`UseDevinSessions`** (`org.devins.use`) permission at org level; `create_as_user_id` also needs `ImpersonateOrgSessions` | Onboarding doctor checks the permission |
+| 11 | Base URL and auth check | Not stated | Base URL `https://api.devin.ai/v3`; `GET /v3/self` returns the principal (`service_user_id`, `org_id`) | Doctor's first check |
+| 12 | Errors | Not stated | Errors are `ProblemDetail` JSON (`title`, `status`, `detail`); responses include `401`, `403`, `404`, `409`, `422` and `429` | The client parses `ProblemDetail` and retries only `429` and `5xx` |
+
+Still unconfirmed, waiting on the implementer's first live session:
+- Query parameters for `GET …/sessions` (for example a page limit or tag filter). The doctor check that lists sessions depends on them.
+- The exact body field of `POST …/messages`.
+- Filename and extension of the testing-mode recording attachment.
+
 ## Sources
 
 - API overview: https://docs.devin.ai/api-reference/overview
@@ -108,3 +132,8 @@ The trade-off: in a Devin session **Devin is the agent**. We drive it through th
 - Testing and recordings: https://docs.devin.ai/work-with-devin/testing-and-recordings
 - MCP servers: https://docs.devin.ai/work-with-devin/mcp
 - Plugins: https://docs.devin.ai/product-guides/plugins · https://docs.devin.ai/cli/extensibility/plugins/overview
+- Get session: https://docs.devin.ai/api-reference/v3/sessions/get-organizations-session
+- Archive session: https://docs.devin.ai/api-reference/v3/sessions/post-organizations-sessions-archive
+- Terminate session: https://docs.devin.ai/api-reference/v3/sessions/delete-organizations-sessions
+- Upload an attachment: https://docs.devin.ai/api-reference/v3/attachments/post-organizations-attachments
+- Android emulator support: https://docs.devin.ai/onboard-devin/environment/android-emulation
