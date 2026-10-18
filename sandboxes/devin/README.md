@@ -31,7 +31,8 @@ Design and acceptance tests: `documentation/tech_docs/IMPLEMENTATION-DEVIN-COSTG
 
 3. **Computer Use** must be enabled in the org settings for Devin to record its end-to-end test video (evidence item 1).
 4. **Blueprint.** Copy [blueprint.yaml](./blueprint.yaml) to the target repository as `.devin/blueprint.yaml`, replace the `<...>` commands, and commit it (a human step at the plan gate). Devin builds the snapshot from it.
-5. **Check:** `node bin/padakan doctor`. The `devin.*` lines check the token (`GET /self`), the permission (`GET /sessions`), the platform, the ACU price and remind you about Computer Use.
+5. **Live check (once per org):** `node sandboxes/devin/live-check.mjs` runs the free, read-only checks; add `--spend` to create two small sessions (capped at 1 ACU each, always terminated) that answer the D.4 questions. Paste its `SUMMARY` line into `documentation/infrastructure/DEVIN.md`.
+6. **Check:** `node bin/padakan doctor`. The `devin.*` lines check the token (`GET /self`), the permission (`GET /sessions`), the platform, the ACU price and remind you about Computer Use.
 
 ## How a tree runs
 
