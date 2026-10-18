@@ -1,0 +1,47 @@
+# Padakan critical-flow e2e suite. Copy to .github/workflows/ in the repository Padakan works on.
+# Runs twice per change: against the pull request's preview before the merge, and against staging
+# after it. Never against production. Secrets come from repository secrets and are never printed.
+name: padakan-e2e
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event_name == 'push' && 'staging' || 'preview' }}
+    env:
+      # The preview URL for a PR (set by your platform's deploy step) or the staging URL after a merge.
+      E2E_BASE_URL: ${{ github.event_name == 'push' && vars.STAGING_URL || vars.PREVIEW_URL_TEMPLATE }}
+      E2E_VIDEO: "on"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Refuse production
+        run: |
+          case "$E2E_BASE_URL" in
+            "" ) echo "E2E_BASE_URL is not set"; exit 1 ;;
+            *"${{ vars.PRODUCTION_HOST }}"* ) if [ -n "${{ vars.PRODUCTION_HOST }}" ]; then echo "refusing to run against production"; exit 1; fi ;;
+          esac
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Critical flows
+        run: npx playwright test features --reporter=line,json
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_NAME: e2e-results.json
+      - name: Keep the evidence (video, traces, results)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: padakan-e2e-${{ github.event_name }}-${{ github.sha }}
+          path: |
+            test-results/
+            e2e-results.json
+          retention-days: 14
