@@ -23,6 +23,7 @@ import { tmpdir } from 'node:os';
 import { randomBytes } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { SandboxError, SECRET_FILE_RE, secretValues } from '../contract.mjs';
+import { runDaytona, cliPrefix } from './cli.mjs';
 import { SETTINGS } from '../../orchestrator/lib/env.mjs';
 
 const run = promisify(execFile);
@@ -46,21 +47,7 @@ const CLAUDE_BLOCKS = ['CLAUDE-padakan.md', 'CLAUDE-evidence.md', 'CLAUDE-disk.m
 
 // ── the CLI ─────────────────────────────────────────────────────────────────────────────────────
 
-async function defaultRun(ctx, args, { timeout = 10 * 60_000 } = {}) {
-  const s = ctx.settings || {};
-  const env = { ...process.env };
-  if (s.DAYTONA_API_KEY) env.DAYTONA_API_KEY = s.DAYTONA_API_KEY;
-  if (s.DAYTONA_API_URL) env.DAYTONA_API_URL = s.DAYTONA_API_URL;
-  try {
-    const { stdout, stderr } = await run('daytona', args, { timeout: timeout + 30_000, maxBuffer: 512 * 1024 * 1024, env });
-    return { code: 0, stdout, stderr };
-  } catch (e) {
-    if (e.code === 'ENOENT') throw new SandboxError('the daytona CLI is not installed (brew install daytonaio/cli/daytona)', { code: 'NO_CLI' });
-    return { code: typeof e.code === 'number' ? e.code : 1, stdout: e.stdout || '', stderr: e.stderr || String(e.message) };
-  }
-}
-
-const cli = (ctx, args, opts) => (ctx.daytonaRun ? ctx.daytonaRun(args, opts) : defaultRun(ctx, args, opts));
+const cli = (ctx, args, opts) => (ctx.daytonaRun ? ctx.daytonaRun(args, opts) : runDaytona(ctx, args, opts));
 
 // Replace every secret setting's value with *** before text leaves this module.
 function scrub(ctx, text) {
@@ -370,7 +357,7 @@ export function herdrNames(ctx, handle) {
 // server with Claude's auth, the workspace and the agent, and clears the folder-trust dialog.
 export async function attach(ctx, handle) {
   if ((ctx.settings?.PADAKAN_DRIVER || 'herdr') === 'headless') {
-    return { watch: 'log', cwd: handle.path, command: `daytona exec ${handle.id} -- "tail -f ${handle.path}/${PADAKAN_DIR}/agent.log"` };
+    return { watch: 'log', cwd: handle.path, command: `${cliPrefix(ctx)} exec ${handle.id} -- "tail -f ${handle.path}/${PADAKAN_DIR}/agent.log"` };
   }
   const { session, agent } = herdrNames(ctx, handle);
   const S = q(session);
@@ -388,7 +375,7 @@ export async function attach(ctx, handle) {
     'done',
     'true',
   ].join('\n'), { cwd: handle.path, timeout: 420 }, 'starting the herdr agent');
-  return { watch: 'herdr', cwd: handle.path, session, command: `daytona ssh ${handle.id}  # then: herdr --session ${session}` };
+  return { watch: 'herdr', cwd: handle.path, session, command: `${cliPrefix(ctx)} ssh ${handle.id}  # then: herdr --session ${session}` };
 }
 
 // ── url, status, pause, resume ─────────────────────────────────────────────────────────────────

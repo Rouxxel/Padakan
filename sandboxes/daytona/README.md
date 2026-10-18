@@ -15,14 +15,13 @@ Set `PADAKAN_SANDBOX_PROVIDER=daytona` in `<records>/.env`.
 
 ## Setup
 
-1. Install the CLI and log in, or put `DAYTONA_API_KEY` in `<records>/.env`:
+1. Install the CLI and put `DAYTONA_API_KEY` in `<records>/.env`. Padakan runs the CLI on its own profile (`HOME=<records>-daytona`, logged in with that key), never on the machine's `daytona login`, which may belong to another organization:
    ```bash
    brew install daytonaio/cli/daytona
-   daytona login
    ```
 2. Bake the snapshot once (CPU, memory and disk are fixed here; `create` cannot change them):
    ```bash
-   daytona snapshot create padakan-base \
+   HOME=<records>-daytona daytona snapshot create padakan-base \
      --dockerfile sandboxes/daytona/snapshot/Dockerfile --cpu 2 --memory 4 --disk 10
    ```
 3. Set what `seed` needs: `CLAUDE_CODE_OAUTH_TOKEN` (from `claude setup-token`), optionally `CLAUDE_CODE_OAUTH_FALLBACK_TOKEN`, `GIT_AUTHOR_NAME`, `GIT_AUTHOR_EMAIL`, and a GitHub token source (`GH_TOKEN_SOURCE=host` uses `gh auth token`; `pat` uses `GH_PAT`).
@@ -51,7 +50,7 @@ Set `PADAKAN_SANDBOX_PROVIDER=daytona` in `<records>/.env`.
 ## Watching a tree
 
 ```bash
-daytona ssh <id>
+HOME=<records>-daytona daytona ssh <id>
 herdr --session padakan-<id>
 ```
 
