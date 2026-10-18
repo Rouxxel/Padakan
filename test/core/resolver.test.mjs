@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { writeFile, readFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { makeRepo, removeDir } from '../helpers/index.mjs';
-import { createModelClient, decisionEndpoint, extractJson, ModelOutputError, ModelError } from '../../core/models.mjs';
+import { createModelClient, decisionEndpoint, decisionProblem, decisionKeySetting, extractJson, ModelOutputError, ModelError } from '../../core/models.mjs';
 import { buildManifest, proposalSchema, resolve, ResolverError, REGISTRY, availableSkills, MANIFEST_SCHEMA } from '../../core/resolver.mjs';
 import { validate } from '../../core/schema.mjs';
 import { loadSettings } from '../../orchestrator/lib/env.mjs';
@@ -74,6 +74,30 @@ describe('model client', () => {
     assert.equal(sleeps.length, 2);
     const bad = createModelClient({ baseUrl: 'http://x/v1', apiKey: 'nb_secret_key_1234', fetch: fakeFetch({ failures: [401] }), sleep: async () => {} });
     await assert.rejects(bad.chatJson({ model: 'm', system: 's', user: 'u', schema: { type: 'object' } }), (e) => e instanceof ModelError && e.status === 401 && !e.message.includes('nb_secret_key_1234'));
+  });
+
+  test('a missing decision key is named before any call; a 401 names the setting', async () => {
+    const none = loadSettings({ exported: {} });
+    assert.match(decisionProblem(none), /NEBIUS_API_KEY.*PADAKAN_DECISION_BASE_URL/);
+    assert.equal(decisionKeySetting(none), 'NEBIUS_API_KEY');
+    assert.equal(decisionProblem(settings), null);
+    const local = loadSettings({ exported: { PADAKAN_DECISION_BASE_URL: 'http://localhost:11434/v1' } });
+    assert.equal(decisionProblem(local), null, 'a local server may need no key');
+    assert.equal(decisionKeySetting(local), 'PADAKAN_DECISION_API_KEY');
+
+    let calls = 0;
+    const ctx = buildContext({ base: { settings: none, records: '/nonexistent', repo: null }, overrides: { audit: {}, github: {} } });
+    const fetchSpy = globalThis.fetch;
+    globalThis.fetch = async () => { calls++; return Response.json({}); };
+    try {
+      assert.throws(() => ctx.models(), (e) => e instanceof ModelError && /NEBIUS_API_KEY/.test(e.message));
+    } finally {
+      globalThis.fetch = fetchSpy;
+    }
+    assert.equal(calls, 0, 'no HTTP call without a key');
+
+    const bad = createModelClient({ baseUrl: 'http://x/v1', apiKey: 'nb_secret_key_1234', keySetting: 'NEBIUS_API_KEY', fetch: fakeFetch({ failures: [401] }), sleep: async () => {} });
+    await assert.rejects(bad.chatJson({ model: 'm', system: 's', user: 'u', schema: { type: 'object' } }), (e) => /returned 401 \(check NEBIUS_API_KEY in <records>\/\.env\)/.test(e.message) && !e.message.includes('nb_secret_key_1234'));
   });
 
   test('JSON inside a code fence is accepted', () => {

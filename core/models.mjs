@@ -33,6 +33,20 @@ export function decisionEndpoint(settings) {
   return { baseUrl, apiKey };
 }
 
+// The setting that holds the decision model's key, for messages that tell the human what to fill.
+export const decisionKeySetting = (settings) => (settings.PADAKAN_DECISION_BASE_URL ? 'PADAKAN_DECISION_API_KEY' : 'NEBIUS_API_KEY');
+
+// Why the decision models cannot be called, or null. A local server (PADAKAN_DECISION_BASE_URL)
+// may need no key; Nebius always does.
+export function decisionProblem(settings) {
+  const { baseUrl, apiKey } = decisionEndpoint(settings);
+  if (!baseUrl) return 'no decision model endpoint: set NEBIUS_BASE_URL, or PADAKAN_DECISION_BASE_URL for a local model server';
+  if (!settings.PADAKAN_DECISION_BASE_URL && !apiKey) {
+    return 'no decision model key: set NEBIUS_API_KEY in <records>/.env, or PADAKAN_DECISION_BASE_URL to use a local model server (Ollama, llama.cpp, vLLM)';
+  }
+  return null;
+}
+
 const redact = (text, key) => (key && key.length >= 4 ? String(text).split(key).join('***') : String(text));
 
 // Pull a JSON object out of a model answer: plain JSON, or JSON inside a ``` fence.
@@ -43,7 +57,7 @@ export function extractJson(content) {
   return JSON.parse(candidate);
 }
 
-export function createModelClient({ baseUrl, apiKey = '', fetch: fetchFn = globalThis.fetch, sleep = (ms) => new Promise((r) => setTimeout(r, ms)), delays = RETRY_DELAYS_MS } = {}) {
+export function createModelClient({ baseUrl, apiKey = '', keySetting = null, fetch: fetchFn = globalThis.fetch, sleep = (ms) => new Promise((r) => setTimeout(r, ms)), delays = RETRY_DELAYS_MS } = {}) {
   if (!baseUrl) throw new ModelError('no decision model endpoint (set NEBIUS_BASE_URL or PADAKAN_DECISION_BASE_URL)');
   const url = `${baseUrl.replace(/\/+$/, '')}/chat/completions`;
 
@@ -70,7 +84,8 @@ export function createModelClient({ baseUrl, apiKey = '', fetch: fetchFn = globa
         continue;
       }
       const text = await res.text().catch(() => '');
-      throw new ModelError(`model endpoint returned ${res.status}: ${redact(text.slice(0, 300), apiKey)}`, { status: res.status });
+      const hint = (res.status === 401 || res.status === 403) && keySetting ? ` (check ${keySetting} in <records>/.env)` : '';
+      throw new ModelError(`model endpoint returned ${res.status}${hint}: ${redact(text.slice(0, 300), apiKey)}`, { status: res.status });
     }
   }
 
