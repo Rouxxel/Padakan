@@ -70,9 +70,9 @@ Padakan/                                  repo root = the plugin
 ├── .claude-plugin/
 │   ├── plugin.json                       name, description, version, author (paths by convention)
 │   └── marketplace.json                  local marketplace, source "./"
-├── CLAUDE.md                             orchestrator rules: decide, dispatch, merge, deploy, record;
-│                                         delegate everything else; no questions except cost;
-│                                         never trust a report
+├── CLAUDE.md                             for contributors building the plugin (Claude Code does not
+│                                         load a plugin's CLAUDE.md for its users)
+├── package.json                          npm test → node --test; no dependencies
 ├── .env.example                          EVERY setting, documented; never holds values
 ├── .gitignore                            .env, .env.*, secrets/, *credentials*.json
 ├── commands/                             thin: each one follows a script in orchestrator/
@@ -102,6 +102,9 @@ Padakan/                                  repo root = the plugin
 ├── hooks/hooks.json                      SessionStart, PreToolUse (block questions except the cost
 │                                         gate; protected paths; secrets), PostToolUse (audit), Stop
 ├── orchestrator/                         the orchestrator's own scripts, one per step
+│   ├── RULES.md                          the orchestrator's rules (OKF), injected by the SessionStart
+│   │                                     hook: decide, dispatch, merge, deploy, record; delegate the
+│   │                                     rest; no questions except cost; never trust a report
 │   ├── README.md                         the lifecycle, which script does which step
 │   ├── lib/                              env.mjs (load order, validation), records.mjs (records-folder
 │   │                                     resolver), herdr.mjs (agent start/prompt/read, workspaces),

@@ -1,0 +1,14 @@
+{
+  "name": "padakan-marketplace",
+  "description": "Local marketplace for the Padakan plugin.",
+  "owner": {
+    "name": "Padakan team"
+  },
+  "plugins": [
+    {
+      "name": "padakan",
+      "source": "./",
+      "description": "Autonomous development you can trust: plan once, then agents build, verify and ship in sandboxes behind deterministic gates."
+    }
+  ]
+}

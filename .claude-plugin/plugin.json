@@ -1,0 +1,12 @@
+{
+  "name": "padakan",
+  "description": "Autonomous development you can trust: an orchestrator plans with one human gate, then agents build, verify and ship in sandboxes (Devin by default). A change reaches production only after deterministic gates, an evidence pack and a gated deploy, with every decision on a signed audit trail and every document in Open Knowledge Format.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Padakan team"
+  },
+  "homepage": "https://github.com/Rouxxel/Padakan",
+  "repository": "https://github.com/Rouxxel/Padakan",
+  "license": "Apache-2.0",
+  "keywords": ["autonomous-development", "orchestrator", "sandboxes", "devin", "verification", "okf"]
+}
