@@ -20,7 +20,7 @@ A Claude Code plugin that lets coding agents plan, build, verify and ship on the
 <br>
 [![Website](https://img.shields.io/badge/website-inloop--nine.vercel.app-FF5A1F?style=flat-square)](https://inloop-nine.vercel.app)
 [![Status](https://img.shields.io/badge/status-in_development-2563EB?style=flat-square)](#status)
-[![Tests](https://img.shields.io/badge/tests-node_--test-16A34A?style=flat-square)](test/)
+[![Tests](https://github.com/Rouxxel/Padakan/actions/workflows/test.yml/badge.svg)](https://github.com/Rouxxel/Padakan/actions/workflows/test.yml)
 [![Dependencies](https://img.shields.io/badge/dependencies-0-16A34A?style=flat-square)](package.json)
 [![License](https://img.shields.io/badge/license-Apache_2.0-blue?style=flat-square)](LICENSE)
 
@@ -60,9 +60,9 @@ Each dot is a task. It moves left to right through the top row, ships, and comes
 | 3 | **Cost gate** | The worst-case estimate is compared with the budget left. Within budget the step runs; over budget that tree pauses and a decision report goes to the human. | arithmetic, then the human only for money | `core/cost.mjs`, `/padakan:decide` |
 | 4 | **Sandbox tree** | One sandbox per task (a Devin session or a Daytona sandbox). The builder plans, builds, reviews and tests in a loop, pushes, and opens a PR. Nobody answers its questions: it decides by rule or reports `BLOCKED`. | the agent, inside its sandbox | `sandboxes/`, `padakan plant`, `brief`, `poll` |
 | 5 | **Gates** | Proven twice (the task's tests and every acceptance criterion live), no regressions (suite and critical-flow e2e), deterministic diff inspection, valid documents, a verified evidence pack. | code, never a model | `core/gates.mjs`, `core/diffcheck.mjs`, `core/okf.mjs` |
-| 6 | **PR and evidence** | Video of the change working, architecture of the change, files touched (from git), tests and CI, each re-checked at its source. | the verifier | `padakan evidence`, `padakan verify` |
+| 6 | **PR and evidence** | Video of the change working, architecture of the change, files touched (from git), tests and CI, each re-checked at its source. | the verifier | `core/report.mjs`, `padakan evidence`, `padakan verify` |
 | 7 | **Orchestrator** | Merges a verified head, one change at a time. `HUMAN_MERGE` waits for a named approver; `ESCALATE` becomes a ticket. | the orchestrator | `padakan merge` |
-| 8 | **Gated deploy** | Behind a flag, then a canary; when the SLO slips it rolls back by itself and escalates. | code | `core/deploy.mjs` (in progress) |
+| 8 | **Gated deploy** | Behind a flag, then a canary; when the SLO slips it rolls back by itself and escalates. | code | `core/deploy.mjs`, `padakan deploy` |
 | 9 | **Production** | The change is live. | | |
 | 10 | **Monitor loop** | Every few minutes: collect logs, cluster them by fingerprint, triage with a model, open a task for each fixable defect, send security and unknowns to a human. | a model, then rules | `core/collect-logs.mjs`, `core/triage.mjs`, `padakan tick` |
 
@@ -88,7 +88,7 @@ In Claude Code (2.1.275 or later):
 | Agents (14), skills (13), hooks (4), commands (11) | done |
 | Lifecycle steps and `bin/padakan`, capability resolver, monitor loop | done |
 | `devin` provider, cost gate and decision report | in progress ([#10](https://github.com/Rouxxel/Padakan/issues/10), [#6](https://github.com/Rouxxel/Padakan/issues/6)) |
-| Evidence pack builder, gated deploy, CI templates | next ([#18](https://github.com/Rouxxel/Padakan/issues/18), [#19](https://github.com/Rouxxel/Padakan/issues/19), [#20](https://github.com/Rouxxel/Padakan/issues/20)) |
+| Evidence pack builder, gated deploy (simulated target), CI docs gate and e2e templates | done |
 
 ## Quick start
 
