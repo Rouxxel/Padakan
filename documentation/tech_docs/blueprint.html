@@ -207,8 +207,8 @@ td code{white-space:nowrap}
         <div><dt>Human gates</dt><dd>1 up front, then cost questions only</dd></div>
         <div><dt>Sub-agents</dt><dd>14, none can call another</dd></div>
         <div><dt>Commands</dt><dd>11 under <code>/padakan:</code></dd></div>
-        <div><dt>Sandbox providers</dt><dd>3: daytona, devin, local</dd></div>
-        <div><dt>Settings</dt><dd>49 variables, all in <code>.env</code></dd></div>
+        <div><dt>Sandbox providers</dt><dd>3: devin (default), daytona, local</dd></div>
+        <div><dt>Settings</dt><dd>52 variables, all in <code>.env</code></dd></div>
         <div><dt>Built today</dt><dd>docs, diagrams, 3 templates</dd></div>
       </dl>
       <div class="legend" role="group" aria-label="Diagram colours">
@@ -420,7 +420,7 @@ td code{white-space:nowrap}
       <header>
         <span class="chno">06 · A TREE'S LIFE</span>
         <h2>One sandbox per task, from plant to retire</h2>
-        <p class="sub">A tree is one sandbox with one repo, one branch and its own signed-in agent, watched in herdr. <code>tree-operator</code> runs these steps through the <code>orchestrator/</code> scripts.</p>
+        <p class="sub">A tree is one sandbox with one repo, one branch and its own agent, watched in Devin's web app or in herdr. <code>tree-operator</code> runs these steps through the <code>orchestrator/</code> scripts.</p>
       </header>
       <figure class="fig">
         <div class="diagram">
@@ -450,8 +450,9 @@ td code{white-space:nowrap}
         <table>
           <thead><tr><th>Provider</th><th>What a tree is</th><th>Use</th></tr></thead>
           <tbody>
-            <tr><td><span class="pill ext">daytona</span> default</td><td>Linux container from a baked snapshot: Claude Code, herdr, Entire, Playwright, gh; no secrets in the image</td><td>web and backend work</td></tr>
-            <tr><td><span class="pill ext">devin</span></td><td>a Devin session in Devin's own cloud VM, driven only through the Devin API; no herdr or other agent inside</td><td>parallel work, with Devin as the agent</td></tr>
+            <tr><td><span class="pill ext">devin</span> default</td><td>a Devin session in a fresh VM from our snapshot (blueprints); Linux, macOS with Xcode and the iOS Simulator, or Windows; records its own test video</td><td>every task, including iOS; Devin is the agent</td></tr>
+            <tr><td><span class="pill ext">daytona</span></td><td>Linux container we control, from a baked snapshot: Claude Code, herdr, Entire, Playwright, gh; no secrets in the image</td><td>when we run our own agent</td></tr>
+            
             <tr><td><span class="pill ext">local</span></td><td>a git worktree on the orchestrator's machine</td><td>development, and the Mac host for iOS and Android device probes</td></tr>
           </tbody>
         </table>
@@ -481,7 +482,7 @@ td code{white-space:nowrap}
             <ul>
               <li data-c="orch"><div class="row"><span class="nm d-orch">.claude-plugin/</span><span class="why"><span class="loc">2 files</span><code>plugin.json</code> and a local <code>marketplace.json</code>. <span class="f f-new">planned</span></span></div></li>
               <li data-c="orch" data-p="1"><div class="row"><span class="nm d-orch">CLAUDE.md</span><span class="why">The orchestrator's rules: decide, dispatch, merge, deploy, record; delegate the rest. <span class="f f-new">planned</span></span></div></li>
-              <li data-c="orch" data-p="1"><div class="row"><span class="nm d-orch">.env.example</span><span class="why">All 49 settings, documented. Never holds values. <span class="f f-new">planned</span></span></div></li>
+              <li data-c="orch" data-p="1"><div class="row"><span class="nm d-orch">.env.example</span><span class="why">All 52 settings, documented. Never holds values. <span class="f f-new">planned</span></span></div></li>
               <li data-c="orch" data-p="1"><div class="row"><span class="nm dir d-orch">commands/</span><span class="why"><span class="loc">11</span>onboard · plan · build · watch · decide · feature · evidence · status · replay · pause · rollback. Thin: each follows the scripts. <span class="f f-new">planned</span></span></div></li>
               <li data-c="agent" data-p="1"><div class="row"><span class="nm dir d-agent">agents/</span><span class="why"><span class="loc">14</span>One file per sub-agent. None has the Task tool. <span class="f f-new">planned</span></span></div></li>
               <li data-c="agent record"><div class="row"><span class="nm dir d-agent">skills/</span><span class="why"><span class="loc">13</span>okf · no-questions · cost-gate · escalation · entire-context · feature-docs · e2e-playbook · evidence-pack · triage-categories · verify-web · verify-ios · verify-android · verify-backend. <span class="f f-new">planned</span></span></div></li>
@@ -566,7 +567,7 @@ PASS. See [the record](./record.md) and [the brief](./brief.md).</code></pre>
     <section class="ch" id="env">
       <header>
         <span class="chno">09 · EVERYTHING IN .ENV</span>
-        <h2>49 settings, one place, validated on load</h2>
+        <h2>52 settings, one place, validated on load</h2>
         <p class="sub">Load order, first value wins: exported environment, then <code>&lt;repo&gt;-padakan/.env</code>, then the plugin <code>.env</code>. An unknown or malformed key fails loudly.</p>
       </header>
       <div class="scroll">
@@ -575,15 +576,15 @@ PASS. See [the record](./record.md) and [the brief](./brief.md).</code></pre>
           <tbody>
             <tr><td>General</td><td class="num">5</td><td>language (<code>en</code>), records folder name and path, tracker</td></tr>
             <tr><td>Terminal and driver</td><td class="num">3</td><td>herdr as terminal and driver (headless for CI)</td></tr>
-            <tr><td>Sandboxes</td><td class="num">11</td><td>provider (daytona · devin · local), trees at once, Daytona snapshot, size, timers</td></tr>
-            <tr><td>Agents and models</td><td class="num">12</td><td>harness, tree model, Claude tokens, Nebius key and URL, per-role models, Devin keys and ACU cap</td></tr>
+            <tr><td>Sandboxes</td><td class="num">11</td><td>provider (devin · daytona · local), trees at once, Daytona snapshot, size, timers</td></tr>
+            <tr><td>Agents and models</td><td class="num">15</td><td>harness, tree model, Claude tokens, Nebius key and URL, per-role models, Devin keys, platform, ACU cap, approvals, playbook</td></tr>
             <tr><td>Git</td><td class="num">4</td><td>GitHub token source, commit identity</td></tr>
             <tr><td>Context</td><td class="num">3</td><td>Entire on or off, search on or off, repo</td></tr>
             <tr><td>Gates</td><td class="num">3</td><td>protected paths, max diff lines and files</td></tr>
             <tr><td>Cost</td><td class="num">3</td><td>budget caps per run, task, step</td></tr>
             <tr><td>Monitor</td><td class="num">2</td><td>cron interval, log sources</td></tr>
             <tr><td>Deploy</td><td class="num">3</td><td>target, canary percent, SLO error rate</td></tr>
-            <tr><td><strong>Total</strong></td><td class="num"><strong>49</strong></td><td>Every variable with its default: <code>PLUGIN-STRUCTURE.md</code> §5</td></tr>
+            <tr><td><strong>Total</strong></td><td class="num"><strong>52</strong></td><td>Every variable with its default: <code>PLUGIN-STRUCTURE.md</code> §5</td></tr>
           </tbody>
         </table>
       </div>
@@ -602,9 +603,9 @@ PASS. See [the record](./record.md) and [the brief](./brief.md).</code></pre>
           <tbody>
             <tr><td><span class="pill ext">Nebius Token Factory</span></td><td>OpenAI-compatible API for the decision models and the <code>openai-compat</code> builder</td></tr>
             <tr><td><span class="pill ext">NVIDIA Nemotron</span></td><td>default triage and resolver model (<code>nvidia/nemotron-3-super-120b-a12b</code>), chosen for structured output</td></tr>
-            <tr><td><span class="pill ext">Daytona</span></td><td>default sandboxes, one per task</td></tr>
-            <tr><td><span class="pill ext">Devin</span></td><td>Devin sessions in their own cloud VMs, several in parallel</td></tr>
-            <tr><td><span class="pill ext">herdr</span></td><td>the terminal where every tree agent runs and can be watched</td></tr>
+            <tr><td><span class="pill ext">Devin</span></td><td>default sandboxes: one session per task, Linux or macOS, recorded testing</td></tr>
+            <tr><td><span class="pill ext">Daytona</span></td><td>alternative sandboxes when we run our own agent</td></tr>
+            <tr><td><span class="pill ext">herdr</span></td><td>the orchestrator's terminal, and where Daytona and local trees run</td></tr>
             <tr><td><span class="pill ext">Entire</span></td><td>optional: sessions linked to commits, a local code graph, search over past sessions</td></tr>
             <tr><td><span class="pill ext">Linear</span></td><td>issues, filed only by the orchestrator</td></tr>
             <tr><td><span class="pill ext">Playwright · DevTools MCP · MobileBuildMCP · AndroidBuildMCP</span></td><td>verify kits for web, iOS and Android</td></tr>

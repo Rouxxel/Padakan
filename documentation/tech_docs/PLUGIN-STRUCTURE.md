@@ -127,9 +127,11 @@ Padakan/                                  repo root = the plugin
 │   ├── contract.mjs                      shared validation (ids, handles, secret filters)
 │   ├── local/
 │   │   └── provider.mjs                  git worktree; for development and the Mac device host
-│   ├── devin/
-│   │   ├── provider.mjs                  Devin API v3 sessions; Devin works in its own cloud VM (no herdr or other agent inside)
-│   │   └── README.md                     service user, org id, ACU limits, structured output
+│   ├── devin/                            DEFAULT provider
+│   │   ├── provider.mjs                  Devin API v3: sessions, messages, attachments, archive
+│   │   ├── blueprint.yaml                template for the repo's .devin/blueprint.yaml (verify kit, knowledge)
+│   │   ├── schemas/report.json           structured output: the CI= PR= ACS= EVIDENCE= BLOCKED= report
+│   │   └── README.md                     service user, org id, platforms, ACU limits, Computer Use
 │   └── daytona/
 │       ├── provider.mjs                  create, bootstrap, seed, exec, push, pull, url, status,
 │       │                                 attach, evidence, retire, destroy
@@ -225,7 +227,7 @@ A marketplace update replaces the plugin folder, so values kept only in the plug
 | Terminal and driver | `PADAKAN_TERMINAL` | `herdr` | where trees are watched |
 | | `PADAKAN_DRIVER` | `herdr` | how a tree agent is driven: `herdr` · `headless` (CI) |
 | | `HERDR_SESSION_PREFIX` | `padakan` | herdr workspace naming |
-| Sandboxes | `PADAKAN_SANDBOX_PROVIDER` | `daytona` | `daytona` · `devin` · `local` |
+| Sandboxes | `PADAKAN_SANDBOX_PROVIDER` | `devin` | `devin` · `daytona` · `local` |
 | | `PADAKAN_MAX_TREES` | `3` | trees running at once |
 | | `DAYTONA_API_KEY` · `DAYTONA_API_URL` · `DAYTONA_TARGET` | · · `eu` | |
 | | `DAYTONA_SNAPSHOT` | `padakan-base` | baked from `sandboxes/daytona/snapshot/` |
@@ -239,6 +241,9 @@ A marketplace update replaces the plugin folder, so values kept only in the plug
 | | `PADAKAN_BUILDER_MODEL` | | model for the `openai-compat` harness |
 | | `DEVIN_API_KEY` · `DEVIN_ORG_ID` | | `devin` provider: service user token (`cog_…`) and org id |
 | | `DEVIN_MAX_ACU` | | per-session ACU cap; also counted by the cost gate |
+| | `DEVIN_PLATFORM` | `linux` | `linux` · `macos` · `windows`; the resolver can override per task |
+| | `DEVIN_BYPASS_APPROVAL` | `true` | no approval prompts inside sessions |
+| | `DEVIN_PLAYBOOK_ID` | | optional playbook with Padakan's standing instructions |
 | Git | `GH_TOKEN_SOURCE` · `GH_PAT` | `host` · | GitHub token for trees |
 | | `GIT_AUTHOR_NAME` · `GIT_AUTHOR_EMAIL` | required | commit identity, no AI attribution |
 | Context | `ENTIRE_ENABLED` | `false` | optional; agents use Entire Graph (local) and session capture |
@@ -271,7 +276,7 @@ The numbers above are placeholders to settle when each module is built.
 | `seed(id)` | secrets per tree by exec; tree `settings.json` (model, attribution off); assemble tree `CLAUDE.md` blocks |
 | `exec(id, cmd)` | one string; exit code from the remote `run.done` file |
 | `push` · `pull` | refuse credential-shaped files; chunked base64 |
-| `attach(id)` | start the agent in herdr (or headless per `PADAKAN_DRIVER`) |
+| `attach(id)` | start the agent and return where to watch it: the Devin session URL, or a herdr pane for `daytona` and `local` |
 | `url(id, port)` | preview URL |
 | `evidence(id, key)` | serve, assert the bundle downloads, pull into `<records>/tasks/<KEY>/evidence/` |
 | `retire(id, key)` | brief the record, poll until seven sections, pull it, then `destroy` |
@@ -281,7 +286,7 @@ The numbers above are placeholders to settle when each module is built.
 ## 8. Settled and open
 
 Settled:
-- herdr is the default terminal and driver; headless only for CI.
+- Devin is the default sandbox provider (see `documentation/infrastructure/DEVIN.md`); Daytona and local stay as options. herdr is the terminal for the orchestrator and for non-Devin trees; headless only for CI.
 - The orchestrator only decides, dispatches, merges, deploys and records; all other work is delegated to agents.
 - Lifecycle scripts live in `orchestrator/`, run by agents.
 - Every setting is in `.env`, including the records folder name (default `<repo>-padakan`).
