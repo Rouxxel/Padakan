@@ -2,6 +2,7 @@
 type: Brand
 title: <Product> brand
 description: Logo, palette, typography and voice. Written and approved at the plan gate; the designer agent and the report generator read it.
+tags: [brand]
 timestamp: <YYYY-MM-DDTHH:MM:SSZ>
 approved_by: <user>
 approved_at: <YYYY-MM-DDTHH:MM:SSZ>
