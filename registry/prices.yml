@@ -1,0 +1,7 @@
+# Price per unit in USD, read by core/cost.mjs (flat "unit: price" lines only).
+# A unit missing here and in .env has no price, and the cost gate pauses rather than guess.
+# Devin ACUs are priced only by PADAKAN_DEVIN_USD_PER_ACU in .env (no default on purpose).
+# Nebius token prices are per 1M tokens; fill in from the Token Factory price list.
+
+ci_minute: 0
+device_minute: 0
