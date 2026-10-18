@@ -15,7 +15,10 @@ The one human gate. Everything the pipelines need from the human is settled here
 5. Ask for the budget caps if `.env` has none, and write them to `<records>/.env`.
 6. If `<records>/brand.md` does not exist, write it from `${CLAUDE_PLUGIN_ROOT}/templates/brand.md` with the human's logo, palette, typography and voice, and ask for approval.
 7. If `ENTIRE_ENABLED=true` and `ENTIRE_SEARCH` is off, ask once whether to connect the repository to Entire for search. Record the answer in `.env`.
-8. File each approved task in the tracker (`PADAKAN_TRACKER`) and add it to `state.json` with status `planned`.
+8. File each approved task in the tracker (`PADAKAN_TRACKER`) and add it to `state.json` with status `planned`:
+   - `github` (default): `gh issue create` on the origin repository, title `<KEY>: <title>`, label `padakan`, body linking `tasks/<KEY>/`; record the issue URL on the task.
+   - `linear`: create the issue with `LINEAR_API_KEY`; record its URL on the task.
+   - `none`: `state.json` only.
 9. `${CLAUDE_PLUGIN_ROOT}/bin/padakan gate close`. From now on nothing asks the human except a cost decision.
 
 Follow `${CLAUDE_PLUGIN_ROOT}/orchestrator/RULES.md`. Every sub-agent gets one brief naming the plugin root (`${CLAUDE_PLUGIN_ROOT}`), the records folder and the paths it may write, and returns one result line.

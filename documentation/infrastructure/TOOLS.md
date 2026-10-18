@@ -31,7 +31,8 @@ Every external service, framework and tool Padakan uses, what it does for us, an
 |---|---|---|---|
 | **Entire** (optional) | Agent sessions captured as checkpoints linked to commits; `entire search` over sessions, commits and code (needs the repo connected to Entire) | `ENTIRE_ENABLED`, `ENTIRE_SEARCH`, `ENTIRE_REPO` | https://entire.io · https://docs.entire.io |
 | **Entire Graph** (optional) | Local code graph (tree-sitter, no network): `query`, `def`, `neighbors`, `impact`, `diff`; used by agents for code questions and by diff inspection for blast radius | `ENTIRE_ENABLED` | https://github.com/entireio/entire-graph |
-| **Linear** | Issues: the orchestrator files and updates them; trees never get access | `PADAKAN_TRACKER`, `LINEAR_API_KEY` | https://linear.app |
+| **GitHub Issues** (default) | Issues: the orchestrator files and updates them with `gh` on the origin repository; trees never file | `PADAKAN_TRACKER=github` | https://cli.github.com |
+| **Linear** (option) | The same, in Linear | `PADAKAN_TRACKER=linear`, `LINEAR_API_KEY` | https://linear.app |
 
 ## Knowledge format
 

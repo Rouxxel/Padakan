@@ -226,8 +226,8 @@ A marketplace update replaces the plugin folder, so values kept only in the plug
 | General | `PADAKAN_LANGUAGE` | `en` | language of briefs, reports and specs |
 | | `PADAKAN_RECORDS_NAME` | `{repo}-padakan` | name of the sibling records folder |
 | | `PADAKAN_RECORDS_DIR` | | absolute path; overrides the name |
-| | `PADAKAN_TRACKER` | `linear` | where issues go |
-| | `LINEAR_API_KEY` | | orchestrator only; trees never get it |
+| | `PADAKAN_TRACKER` | `github` | where issues go: `github` · `linear` · `none` |
+| | `LINEAR_API_KEY` | | only with `linear`; orchestrator only, trees never get it |
 | Terminal and driver | `PADAKAN_TERMINAL` | `herdr` | where trees are watched |
 | | `PADAKAN_DRIVER` | `herdr` | how a tree agent is driven: `herdr` · `headless` (CI) |
 | | `HERDR_SESSION_PREFIX` | `padakan` | herdr workspace naming |

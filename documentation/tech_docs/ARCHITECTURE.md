@@ -32,7 +32,7 @@ Read next:
 
 | Lane | What happens |
 |---|---|
-| 1. Intake and planning | Target → PRD → plan gate (human) → tasks and Linear issues → capability resolver → one manifest per task |
+| 1. Intake and planning | Target → PRD → plan gate (human) → tasks filed as GitHub issues (or Linear) → capability resolver → one manifest per task |
 | 2. Build pipeline | One sandbox ("tree") per task → loop engine (plan, build, review, test) → verification gates → PR → evidence pack → orchestrator decision → gated deploy |
 | 3. Monitor loop | Cron tick → log collector → triage model → bug-agent → report → orchestrator opens a task and plants a tree |
 | 4. Cost gate | Estimate before a costly step → within budget: run → over budget: pause that tree, send a decision report, wait |
@@ -85,7 +85,7 @@ The **registry** (`registry/capabilities.json` in the plugin) lists everything a
 | iOS | MobileBuildMCP (getsentry) | xcodebuild, xcrun simctl | needs a macOS host with Xcode 16+ |
 | Android | AndroidBuildMCP or adb-mcp | adb, gradle, emulator | needs the Android SDK, JDK 17+ and KVM |
 | Backend / API | none required | curl, docker logs, docker compose, pytest / jest | container logs also feed the monitor loop |
-| Always available | Linear | git, gh, Entire (optional) | skills: TDD, code review, security, debugging, docs |
+| Always available | GitHub Issues (or Linear) | git, gh, Entire (optional) | skills: TDD, code review, security, debugging, docs |
 
 iOS and macOS work runs on Devin's macOS VMs (Xcode, iOS Simulator, a recorded desktop), chosen per task with the session `platform`. Android emulator support on Devin still needs checking; until then the Mac host (`local` provider) runs Android device probes. Details: `documentation/infrastructure/DEVIN.md`.
 
