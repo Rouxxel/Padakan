@@ -14,15 +14,17 @@ export const REPLIES = {
 // Above this many answers in one session, stop answering and escalate (no endless back and forth).
 export const MAX_ANSWERS = 5;
 
+// Secret requests are checked first (the plan lists them second): a message such as "I need the
+// STRIPE_KEY to proceed with this plan" must never be answered with a plain approval.
 const RULES = [
+  { kind: 'secret', test: /\b(secrets?|credentials?|passwords?|tokens?|api[ _-]?keys?|access keys?|[a-z0-9_]+_(key|token|secret)|login|log in|sign[- ]?in)\b/i },
   { kind: 'approve', test: /\b(confirm|approve|approval|sign[- ]?off|ok(ay)? (to|with)|go ahead|proceed)\b[\s\S]*\b(plan|approach|test plan|steps|this)\b|\b(plan|approach|test plan)\b[\s\S]*\b(ok|okay|good|fine|look right|approve|confirm|proceed)\b/i },
-  { kind: 'secret', test: /\b(secret|credential|password|token|api[ _-]?key|login|log in|sign[- ]?in|access key)s?\b/i },
   { kind: 'option', test: /\b(which (one|option|approach|way)|should i (use|pick|choose|go with)|option [a-z0-9]\b|prefer|or should)\b/i },
 ];
 
 // The newest message from Devin (not one we sent), after the last cursor.
 export function latestDevinMessage(items = []) {
-  return [...items].reverse().find((m) => m.source !== 'user' && m.origin !== 'api' && typeof m.message === 'string') ?? null;
+  return [...items].reverse().find((m) => m.source !== 'user' && typeof m.message === 'string') ?? null;
 }
 
 // messages: items from GET …/messages since the handle's cursor.
