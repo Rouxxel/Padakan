@@ -16,5 +16,5 @@ Escalate when:
 
 How:
 1. Write `<records>/tasks/<KEY>/escalation.md` (OKF, `type: Escalation`): what happened, the evidence (paths, not prose), what was tried, what a human needs to decide.
-2. File it in the tracker (`PADAKAN_TRACKER`) with a link to that file. Only the orchestrator files tickets.
+2. File it in the tracker (`PADAKAN_TRACKER`: a GitHub issue by default, Linear when set, nothing with `none`) with a link to that file. Only the orchestrator files tickets.
 3. Record it in the audit trail. Move on to other work.

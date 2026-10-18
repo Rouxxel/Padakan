@@ -5,7 +5,7 @@ import { loadContext } from './records.mjs';
 import { openGateway } from '../../sandboxes/index.mjs';
 import { openAudit } from '../../core/audit.mjs';
 import { createGithub } from './github.mjs';
-import { createModelClient, decisionEndpoint } from '../../core/models.mjs';
+import { createModelClient, decisionEndpoint, decisionKeySetting, decisionProblem, ModelError } from '../../core/models.mjs';
 
 export function buildContext({ cwd = process.cwd(), exported = process.env, base = null, overrides = {} } = {}) {
   const ctx = base || loadContext({ cwd, exported });
@@ -17,6 +17,11 @@ export function buildContext({ cwd = process.cwd(), exported = process.env, base
     github: overrides.github || createGithub(),
     now: overrides.now || (() => new Date().toISOString()),
     // The decision-model client, created on first use so steps that never call a model need no endpoint.
-    models: overrides.models || (() => createModelClient(decisionEndpoint(ctx.settings))),
+    // A missing key fails here, before any HTTP call, naming the setting to fill.
+    models: overrides.models || (() => {
+      const problem = decisionProblem(ctx.settings);
+      if (problem) throw new ModelError(problem);
+      return createModelClient({ ...decisionEndpoint(ctx.settings), keySetting: decisionKeySetting(ctx.settings) });
+    }),
   };
 }
