@@ -1,0 +1,226 @@
+// The orchestrator's lifecycle steps. Each step:
+//   - goes through the sandbox gateway, never a provider directly;
+//   - asserts on effects (the remote branch, commits, the PR, CI), never on a status field alone;
+//   - writes its details to the records folder and returns ONE result line.
+//
+// run(ctx, args) -> { line, code, details? }   ctx from orchestrator/lib/context.mjs
+// bin/padakan <step> ... calls these; agents (mostly tree-operator and verifier) run that CLI.
+
+import { cp, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { join, relative } from 'node:path';
+import { init as initRecords, taskDir } from './lib/records.mjs';
+import { readState, updateTask, getTask, treeId, branchFor, assertKey } from './lib/state.mjs';
+import { validateFile, validateBundle } from '../core/okf.mjs';
+import { inspect } from '../core/diffcheck.mjs';
+import { verdict, resultLine } from '../core/gates.mjs';
+
+const ok = (line, details) => ({ line, code: 0, details });
+const fail = (line, details) => ({ line, code: 1, details });
+
+function flags(args) {
+  const pos = [];
+  const opt = {};
+  for (let i = 0; i < args.length; i++) {
+    if (args[i].startsWith('--')) {
+      const k = args[i].slice(2);
+      const v = args[i + 1] && !args[i + 1].startsWith('--') ? args[++i] : true;
+      opt[k] = v;
+    } else pos.push(args[i]);
+  }
+  return { pos, opt };
+}
+
+async function readJson(path) {
+  if (!existsSync(path)) return undefined;
+  return JSON.parse(await readFile(path, 'utf8'));
+}
+
+async function writeOkf(path, { type, title, description, tags, body }, now) {
+  await mkdir(join(path, '..'), { recursive: true });
+  await writeFile(path, `---\ntype: ${type}\ntitle: ${title}\ndescription: ${description}\ntags: [${tags.join(', ')}]\ntimestamp: ${now()}\n---\n\n${body}\n`);
+}
+
+async function taskTree(ctx, key) {
+  const task = await getTask(ctx.records, key);
+  if (!task.tree) throw new Error(`task ${key} has no tree; run \`padakan plant ${key}\``);
+  return { task, handle: await ctx.gateway.get(task.tree) };
+}
+
+// ── init: create the records folder ─────────────────────────────────────────────────────────────
+export async function init(ctx) {
+  const r = await initRecords(ctx.records, { repo: ctx.repo ? ctx.repo.split('/').pop() : undefined });
+  await ctx.audit.append({ type: 'records.init', summary: `records initialised (${r.created.length} files created)` });
+  return ok(`RECORDS=${ctx.records} CREATED=${r.created.length}`);
+}
+
+// ── plant <KEY> [--provider p] [--base ref] ─────────────────────────────────────────────────────
+export async function plant(ctx, args) {
+  const { pos, opt } = flags(args);
+  const key = assertKey(pos[0]);
+  const id = treeId(key);
+  const branch = branchFor(key);
+  const handle = await ctx.gateway.create(id, { task: key, branch, base: opt.base || 'HEAD', ...(opt.provider ? { provider: opt.provider } : {}) });
+  await updateTask(ctx.records, key, { status: 'planted', tree: id, branch, base: handle.base_sha || null, provider: handle.provider }, ctx.now);
+  await ctx.audit.append({ type: 'tree.planted', task: key, tree: id, provider: handle.provider, summary: `tree ${id} planted on ${handle.provider}` });
+  return ok(`TREE=${id} STATE=${handle.state} BRANCH=${branch}`);
+}
+
+// ── attach <KEY>: where to watch the tree ───────────────────────────────────────────────────────
+export async function attach(ctx, args) {
+  const key = assertKey(args[0]);
+  const { handle } = await taskTree(ctx, key);
+  if (await ctx.gateway.supports(handle.id, 'attach')) {
+    const r = await ctx.gateway.attach(handle.id);
+    return ok(`TREE=${handle.id} WATCH=${r.watch || 'none'} CWD=${r.cwd || 'none'}`);
+  }
+  const u = await ctx.gateway.url(handle.id);
+  return ok(`TREE=${handle.id} WATCH=${u.url || handle.url || 'none'}`);
+}
+
+// ── brief <KEY> <brief.md>: validate, store, deliver ────────────────────────────────────────────
+export async function brief(ctx, args) {
+  const key = assertKey(args[0]);
+  const file = args[1];
+  if (!file || !existsSync(file)) return fail(`BRIEF=missing PATH=${file || 'none'}`);
+  const problems = await validateFile(file);
+  if (problems.length) return fail(`BRIEF=invalid PROBLEMS=${problems.length}`, problems);
+  const { handle } = await taskTree(ctx, key);
+  const dir = await taskDir(ctx.records, key);
+  const stored = join(dir, 'brief.md');
+  if (file !== stored) await cp(file, stored);
+  await ctx.gateway.brief(handle.id, stored);
+  await updateTask(ctx.records, key, { status: 'building' }, ctx.now);
+  await ctx.audit.append({ type: 'tree.briefed', task: key, tree: handle.id, summary: 'brief delivered' });
+  return ok(`TREE=${handle.id} BRIEF=delivered`);
+}
+
+// ── poll <KEY>: state plus the effect on the remote and GitHub ──────────────────────────────────
+export async function poll(ctx, args) {
+  const key = assertKey(args[0]);
+  const { task, handle } = await taskTree(ctx, key);
+  const st = (await ctx.gateway.supports(handle.id, 'poll')) ? await ctx.gateway.poll(handle.id) : await ctx.gateway.status(handle.id);
+  const state = st.state || handle.state;
+  const sha = await ctx.github.remoteBranch(ctx.repo, task.branch);
+  const commits = sha && task.base ? await ctx.github.commitsAhead(ctx.repo, task.base, task.branch) : 0;
+  const pr = sha ? await ctx.github.prForBranch(ctx.repo, task.branch) : null;
+  const checks = pr ? await ctx.github.prChecks(ctx.repo, pr.number) : { ci: 'none', checks: [] };
+  const done = !!(sha && commits > 0 && pr && pr.headRefOid === sha);
+  const effect = { state, remote_sha: sha, commits, pr, ci: checks.ci, checks: checks.checks, done, at: ctx.now() };
+  const dir = await taskDir(ctx.records, key);
+  await mkdir(join(dir, 'checks'), { recursive: true });
+  await writeFile(join(dir, 'checks', 'poll.json'), `${JSON.stringify(effect, null, 2)}\n`);
+  await updateTask(ctx.records, key, { tree_state: state, ...(pr ? { pr: pr.url, pr_number: pr.number } : {}), head: sha }, ctx.now);
+  return ok(`TREE=${handle.id} STATE=${state} PUSHED=${sha ? 'yes' : 'no'} COMMITS=${commits} PR=${pr ? pr.url : 'none'} CI=${checks.ci} EFFECT=${done ? 'done' : 'not-yet'}`);
+}
+
+// ── verify <KEY>: facts in, verdict out ─────────────────────────────────────────────────────────
+// Agents write their facts to tasks/<KEY>/checks/: tests.json, acceptance.json, suite.json, e2e.json,
+// evidence.json. This step adds diff inspection and the OKF check, then runs the gates.
+export async function verify(ctx, args) {
+  const key = assertKey(args[0]);
+  const task = await getTask(ctx.records, key);
+  const dir = await taskDir(ctx.records, key);
+  const checks = join(dir, 'checks');
+  const head = task.head || (await ctx.github.remoteBranch(ctx.repo, task.branch));
+  const manifest = (await readJson(join(dir, 'manifest.json'))) || {};
+
+  let diff;
+  if (head && task.base) {
+    diff = await inspect({ repo: ctx.repo, base: task.base, head, settings: ctx.settings, allowDependencies: manifest.allowDependencies || [] });
+  }
+  const okf = (await validateBundle(dir)).map((p) => `${relative(ctx.records, p.file)}: ${p.problem}`);
+  const input = {
+    taskTests: await readJson(join(checks, 'tests.json')),
+    acceptance: await readJson(join(checks, 'acceptance.json')),
+    suite: await readJson(join(checks, 'suite.json')),
+    e2e: await readJson(join(checks, 'e2e.json')),
+    diff,
+    okf,
+    evidence: await readJson(join(checks, 'evidence.json')),
+    skipped: task.skipped || [],
+  };
+  const v = verdict(input);
+  await mkdir(checks, { recursive: true });
+  await writeFile(join(checks, 'verify.json'), `${JSON.stringify({ head, input, ...v }, null, 2)}\n`);
+  await writeOkf(
+    join(checks, 'verify.md'),
+    {
+      type: 'Verification',
+      title: `${key} · ${v.verdict}`,
+      description: `Gates verdict for ${key} at ${head ? head.slice(0, 12) : 'no head'}.`,
+      tags: ['verification', v.verdict.toLowerCase()],
+      body: [`# ${key} · ${v.verdict}`, '', `Head: \`${head || 'none'}\``, '', '| Gate | Level | Detail |', '|---|---|---|', ...v.reasons.map((r) => `| ${r.gate} | ${r.level} | ${r.detail.replaceAll('|', '/')} |`), v.reasons.length ? '' : 'All gates passed.'].join('\n'),
+    },
+    ctx.now,
+  );
+  const status = v.verdict === 'ESCALATE' ? 'escalated' : 'verified';
+  await updateTask(ctx.records, key, { status, verdict: v.verdict, verified_head: head }, ctx.now);
+  await ctx.audit.append({ type: 'gates.verdict', task: key, head, verdict: v.verdict, reasons: v.reasons.length, summary: `verdict ${v.verdict}` });
+  return { line: `${resultLine(v)} CHECKS=${relative(ctx.records, join(checks, 'verify.md'))}`, code: v.verdict === 'ESCALATE' ? 1 : 0 };
+}
+
+// ── evidence <KEY>: pull what the tree recorded ─────────────────────────────────────────────────
+export async function evidence(ctx, args) {
+  const key = assertKey(args[0]);
+  const { handle } = await taskTree(ctx, key);
+  const r = await ctx.gateway.evidence(handle.id, key);
+  await ctx.audit.append({ type: 'evidence.pulled', task: key, video: r.video || null, summary: `evidence pulled (${(r.files || []).length} files)` });
+  return ok(`EVIDENCE=tasks/${key}/evidence VIDEO=${r.video || 'none'} FILES=${(r.files || []).length}`);
+}
+
+// ── merge <KEY> [--approved-by name]: only a verified head, one at a time ───────────────────────
+export async function merge(ctx, args) {
+  const { pos, opt } = flags(args);
+  const key = assertKey(pos[0]);
+  const task = await getTask(ctx.records, key);
+  const v = await readJson(join(ctx.records, 'tasks', key, 'checks', 'verify.json'));
+  if (!v) return fail(`MERGED=no REASON="not verified; run padakan verify ${key}"`);
+  if (v.verdict === 'ESCALATE') return fail('MERGED=no REASON="verdict is ESCALATE"');
+  if (v.verdict === 'HUMAN_MERGE' && !opt['approved-by']) return fail('MERGED=no REASON="verdict is HUMAN_MERGE; needs --approved-by <name>"');
+  const pr = await ctx.github.prForBranch(ctx.repo, task.branch);
+  if (!pr) return fail('MERGED=no REASON="no pull request"');
+  if (pr.headRefOid !== v.head) return fail('MERGED=no REASON="the PR changed after verification; verify again"');
+  await ctx.github.mergePr(ctx.repo, pr.number);
+  await updateTask(ctx.records, key, { status: 'merged', merged_head: v.head, ...(opt['approved-by'] ? { approved_by: opt['approved-by'] } : {}) }, ctx.now);
+  await ctx.audit.append({ type: 'pr.merge', task: key, head: v.head, pr: pr.url, verdict: v.verdict, approved_by: opt['approved-by'] || null, summary: `merged ${pr.url}` });
+  return ok(`MERGED=yes PR=${pr.url} HEAD=${v.head.slice(0, 12)}`);
+}
+
+// ── retire <KEY>: pull the record, end the tree ─────────────────────────────────────────────────
+export async function retire(ctx, args) {
+  const key = assertKey(args[0]);
+  const { handle } = await taskTree(ctx, key);
+  const r = await ctx.gateway.retire(handle.id, key);
+  await updateTask(ctx.records, key, { status: 'retired', tree_state: r.destroyed ? 'gone' : handle.state }, ctx.now);
+  await ctx.audit.append({ type: 'tree.retired', task: key, tree: handle.id, record: r.record || null, summary: `tree ${handle.id} retired` });
+  return ok(`TREE=${handle.id} RECORD=${r.record || 'none'} DESTROYED=${r.destroyed ? 'yes' : 'no'}`);
+}
+
+// ── recycle <KEY>: a wedged tree is replaced, never nursed. The remote branch is the asset. ─────
+export async function recycle(ctx, args) {
+  const key = assertKey(args[0]);
+  const { task, handle } = await taskTree(ctx, key);
+  const sha = await ctx.github.remoteBranch(ctx.repo, task.branch);
+  if (!sha) return fail(`RECYCLED=no REASON="branch ${task.branch} is not on the remote; nothing to recover from"`);
+  await ctx.gateway.destroy(handle.id, { force: true });
+  const fresh = await ctx.gateway.create(handle.id, { task: key, branch: task.branch, base: sha, provider: handle.provider });
+  await ctx.audit.append({ type: 'tree.recycled', task: key, tree: handle.id, from: sha, summary: `tree ${handle.id} recycled from ${sha.slice(0, 12)}` });
+  return ok(`TREE=${fresh.id} RECYCLED=yes FROM=${sha.slice(0, 12)}`);
+}
+
+// ── status / ls: read-only views ────────────────────────────────────────────────────────────────
+export async function status(ctx) {
+  const s = await readState(ctx.records);
+  const tasks = Object.entries(s.tasks || {});
+  const open = tasks.filter(([, t]) => !['merged', 'retired', 'done'].includes(t.status));
+  const details = tasks.map(([k, t]) => `${k}\t${t.status}\t${t.tree || '-'}\t${t.verdict || '-'}\t${t.pr || '-'}`);
+  return ok(`TASKS=${tasks.length} OPEN=${open.length} GATE=${s.gate || 'closed'}`, details);
+}
+
+export async function ls(ctx) {
+  const handles = await ctx.gateway.list();
+  return ok(`TREES=${handles.length}`, handles.map((h) => `${h.id}\t${h.provider}\t${h.state}\t${h.task || '-'}\t${h.url || h.path || '-'}`));
+}
+
+export const STEPS = { init, plant, attach, brief, poll, verify, evidence, merge, retire, recycle, status, ls };

@@ -48,7 +48,15 @@ export async function create(ctx, id, { repo = ctx.repo, branch = `padakan/${id}
   const path = join(treesRoot(ctx.records), id);
   if (existsSync(path)) throw new SandboxError(`worktree path already exists: ${path}`, { code: 'EXISTS' });
   await mkdir(treesRoot(ctx.records), { recursive: true });
-  await git(repo, 'worktree', 'add', '-q', '-b', branch, path, baseSha);
+  const existing = await gitTry(repo, 'rev-parse', '--verify', `refs/heads/${branch}`);
+  if (existing) {
+    // A recycled tree: reuse the branch, fast-forwarded to the base when the base is ahead of it.
+    await git(repo, 'worktree', 'add', '-q', path, branch);
+    const behind = (await gitTry(repo, 'merge-base', '--is-ancestor', existing, baseSha)) !== null;
+    if (behind && existing !== baseSha) await git(path, 'reset', '-q', '--hard', baseSha);
+  } else {
+    await git(repo, 'worktree', 'add', '-q', '-b', branch, path, baseSha);
+  }
   await mkdir(join(path, PADAKAN_DIR, 'evidence'), { recursive: true });
   await exclude(path);
   return { repo, branch, base_sha: baseSha, path, url: null, state: 'ready', ...(task ? { task } : {}) };

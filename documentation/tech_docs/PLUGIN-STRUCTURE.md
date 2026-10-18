@@ -106,21 +106,12 @@ Padakan/                                  repo root = the plugin
 │   │                                     hook: decide, dispatch, merge, deploy, record; delegate the
 │   │                                     rest; no questions except cost; never trust a report
 │   ├── README.md                         the lifecycle, which script does which step
-│   ├── lib/                              env.mjs (load order, validation), records.mjs (records-folder
-│   │                                     resolver), herdr.mjs (agent start/prompt/read, workspaces),
-│   │                                     log.mjs
-│   ├── plant.mjs                         create + bootstrap + seed + clone a tree for a task
-│   ├── attach.mjs                        start the tree agent in herdr and open the local space
-│   ├── brief.mjs                         render templates/brief.md, push it, prompt the agent
-│   ├── poll.mjs                          watch effects: remote branch, git status, report line
-│   ├── verify.mjs                        re-check every claim at its source; calls core/
-│   ├── evidence.mjs                      pull the bundle, build the evidence report
-│   ├── merge.mjs                         merge one at a time, each validated before the next
-│   ├── retire.mjs                        seven-section record, pull it, destroy the tree
-│   ├── tick.mjs                          one monitor tick: collect, triage, bug-agent, decide
-│   ├── doctor.mjs                        environment checks before anything runs
-│   ├── status.mjs · ls.mjs               trees, tasks, budget left
-│   └── recycle.mjs                       rescue work from a wedged tree, plant it again
+│   ├── lib/                              env.mjs (settings), records.mjs (records folder), state.mjs
+│   │                                     (state.json), github.mjs (remote and PR effects), context.mjs
+│   ├── steps.mjs                         the lifecycle steps, one function each: init, plant, attach,
+│   │                                     brief, poll, verify, evidence, merge, retire, recycle, status, ls
+│   ├── doctor.mjs                        environment checks, one CHECK line each, then DOCTOR=
+│   └── tick.mjs                          one monitor tick (issue #17)
 ├── bin/
 │   ├── padakan                           one entry point: `padakan <step> ...` → orchestrator/<step>.mjs
 │   └── padakan-run                       headless outer loop (fresh pass each time, caps in bash)

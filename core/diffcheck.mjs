@@ -106,14 +106,20 @@ export function parseDiff(text) {
   return files.sort((a, b) => a.path.localeCompare(b.path));
 }
 
+// The kinds of secret found in one line of text (empty when none). Never returns the value.
+export function secretKinds(text) {
+  const kinds = SECRET_PATTERNS.filter(([, re]) => re.test(text)).map(([kind]) => kind);
+  if (!kinds.length) {
+    const g = text.match(GENERIC);
+    if (g && entropy(g[1]) >= 3.5) kinds.push('generic-secret');
+  }
+  return kinds;
+}
+
 export function scanSecrets(files) {
   const hits = [];
   for (const f of files) {
-    for (const { line, text } of f.addedLines) {
-      for (const [kind, re] of SECRET_PATTERNS) if (re.test(text)) hits.push({ file: f.path, line, kind });
-      const g = text.match(GENERIC);
-      if (g && entropy(g[1]) >= 3.5 && !SECRET_PATTERNS.some(([, re]) => re.test(text))) hits.push({ file: f.path, line, kind: 'generic-secret' });
-    }
+    for (const { line, text } of f.addedLines) for (const kind of secretKinds(text)) hits.push({ file: f.path, line, kind });
   }
   return hits;
 }
