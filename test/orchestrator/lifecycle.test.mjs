@@ -151,7 +151,7 @@ test('doctor prints one line per check and a verdict', async () => {
     assert.ok(d.details.some((l) => /^CHECK settings ok/.test(l)));
     assert.ok(d.details.some((l) => /^CHECK decision-model warn no decision model key: set NEBIUS_API_KEY/.test(l)), 'a missing model key is a warning, not ok');
     const keyed = await doctor({ ...p.ctx, settings: loadSettings({ exported: { PADAKAN_SANDBOX_PROVIDER: 'local', GIT_AUTHOR_NAME: 'T', GIT_AUTHOR_EMAIL: 't@e.st', NEBIUS_API_KEY: 'nb_key_1234' } }) }, { probe });
-    assert.ok(keyed.details.some((l) => /^CHECK decision-model ok https:\/\/api\.tokenfactory\.nebius\.com/.test(l)));
+    assert.ok(keyed.details.some((l) => /^CHECK decision-model ok nebius https:\/\/api\.tokenfactory\.nebius\.com/.test(l)));
     assert.ok(!keyed.details.join('\n').includes('nb_key_1234'));
   } finally {
     await removeDir(p.base);

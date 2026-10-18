@@ -15,6 +15,8 @@ Every external service, framework and tool Padakan uses, what it does for us, an
 | Tool | Role | Configured by | Link |
 |---|---|---|---|
 | **Nebius Token Factory** | OpenAI-compatible API over open models; serves the decision models and the `openai-compat` builder harness | `NEBIUS_API_KEY`, `NEBIUS_BASE_URL` (`https://api.tokenfactory.nebius.com/v1/`) | https://docs.tokenfactory.nebius.com |
+| **TypeSafe Jev** (option) | System One model: answers typed questions (choice, yes/no, score) with calibrated probabilities in well under a second per question set, and cannot produce free text. The resolver asks it the target, each optional skill and step, and a cost bucket per step (ranges from its 10th/50th/90th percentiles); triage asks category, severity and fixable per cluster | `PADAKAN_DECISION_PROVIDER=typesafe`, `TYPESAFE_API_KEY`, `TYPESAFE_MODEL` (`jev-latest`) | https://docs.typesafe.ai |
+| **Any OpenAI-compatible server** (option) | A local model (Ollama, llama.cpp, vLLM) or another hosted API for the decision models | `PADAKAN_DECISION_PROVIDER=openai-compat`, `PADAKAN_DECISION_BASE_URL`, `PADAKAN_DECISION_API_KEY` | |
 | **NVIDIA Nemotron** | Default triage and capability-resolver model (`nvidia/nemotron-3-super-120b-a12b`: 128K context, function calling and structured output) | `PADAKAN_TRIAGE_MODEL`, `PADAKAN_RESOLVER_MODEL` | https://nebius.com/services/token-factory/nemotron |
 
 ## Sandboxes and agents

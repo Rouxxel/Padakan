@@ -26,25 +26,45 @@ export class ModelOutputError extends Error {
   }
 }
 
-// Endpoint and key for the decision models, from settings.
-export function decisionEndpoint(settings) {
-  const baseUrl = settings.PADAKAN_DECISION_BASE_URL || settings.NEBIUS_BASE_URL;
-  const apiKey = settings.PADAKAN_DECISION_BASE_URL ? settings.PADAKAN_DECISION_API_KEY || '' : settings.NEBIUS_API_KEY || '';
-  return { baseUrl, apiKey };
+// Who answers the decision models. `auto` keeps the original behaviour: a local or other
+// OpenAI-compatible server when PADAKAN_DECISION_BASE_URL is set, Nebius Token Factory otherwise.
+export function decisionProvider(settings) {
+  const p = settings.PADAKAN_DECISION_PROVIDER || 'auto';
+  if (p !== 'auto') return p;
+  return settings.PADAKAN_DECISION_BASE_URL ? 'openai-compat' : 'nebius';
 }
 
-// The setting that holds the decision model's key, for messages that tell the human what to fill.
-export const decisionKeySetting = (settings) => (settings.PADAKAN_DECISION_BASE_URL ? 'PADAKAN_DECISION_API_KEY' : 'NEBIUS_API_KEY');
+// Endpoint and key for the decision models, from settings.
+export function decisionEndpoint(settings) {
+  const provider = decisionProvider(settings);
+  if (provider === 'typesafe') return { baseUrl: settings.TYPESAFE_BASE_URL, apiKey: settings.TYPESAFE_API_KEY || '' };
+  if (provider === 'openai-compat') return { baseUrl: settings.PADAKAN_DECISION_BASE_URL, apiKey: settings.PADAKAN_DECISION_API_KEY || '' };
+  return { baseUrl: settings.NEBIUS_BASE_URL, apiKey: settings.NEBIUS_API_KEY || '' };
+}
 
-// Why the decision models cannot be called, or null. A local server (PADAKAN_DECISION_BASE_URL)
-// may need no key; Nebius always does.
+const KEY_SETTING = { nebius: 'NEBIUS_API_KEY', 'openai-compat': 'PADAKAN_DECISION_API_KEY', typesafe: 'TYPESAFE_API_KEY' };
+
+// The setting that holds the decision model's key, for messages that tell the human what to fill.
+export const decisionKeySetting = (settings) => KEY_SETTING[decisionProvider(settings)];
+
+// Why the decision models cannot be called, or null. An OpenAI-compatible server (a local one) may
+// need no key; Nebius and TypeSafe always do.
 export function decisionProblem(settings) {
+  const provider = decisionProvider(settings);
   const { baseUrl, apiKey } = decisionEndpoint(settings);
-  if (!baseUrl) return 'no decision model endpoint: set NEBIUS_BASE_URL, or PADAKAN_DECISION_BASE_URL for a local model server';
-  if (!settings.PADAKAN_DECISION_BASE_URL && !apiKey) {
-    return 'no decision model key: set NEBIUS_API_KEY in <records>/.env, or PADAKAN_DECISION_BASE_URL to use a local model server (Ollama, llama.cpp, vLLM)';
+  if (provider === 'openai-compat') return baseUrl ? null : 'PADAKAN_DECISION_PROVIDER is openai-compat but PADAKAN_DECISION_BASE_URL is empty';
+  if (!baseUrl) return `no decision model endpoint: set ${provider === 'typesafe' ? 'TYPESAFE_BASE_URL' : 'NEBIUS_BASE_URL'}`;
+  if (!apiKey && provider === 'typesafe') return 'no decision model key: set TYPESAFE_API_KEY in <records>/.env, or choose another PADAKAN_DECISION_PROVIDER';
+  if (!apiKey) {
+    return 'no decision model key: set NEBIUS_API_KEY in <records>/.env, PADAKAN_DECISION_BASE_URL to use a local model server (Ollama, llama.cpp, vLLM), or PADAKAN_DECISION_PROVIDER=typesafe with TYPESAFE_API_KEY';
   }
   return null;
+}
+
+// The model each role uses with the chosen provider: Jev for both roles with typesafe.
+export function decisionModel(settings, role) {
+  if (decisionProvider(settings) === 'typesafe') return settings.TYPESAFE_MODEL;
+  return role === 'triage' ? settings.PADAKAN_TRIAGE_MODEL : settings.PADAKAN_RESOLVER_MODEL;
 }
 
 const redact = (text, key) => (key && key.length >= 4 ? String(text).split(key).join('***') : String(text));
@@ -57,11 +77,9 @@ export function extractJson(content) {
   return JSON.parse(candidate);
 }
 
-export function createModelClient({ baseUrl, apiKey = '', keySetting = null, fetch: fetchFn = globalThis.fetch, sleep = (ms) => new Promise((r) => setTimeout(r, ms)), delays = RETRY_DELAYS_MS } = {}) {
-  if (!baseUrl) throw new ModelError('no decision model endpoint (set NEBIUS_BASE_URL or PADAKAN_DECISION_BASE_URL)');
-  const url = `${baseUrl.replace(/\/+$/, '')}/chat/completions`;
-
-  async function post(body) {
+// POST JSON with the retry policy: 429 and 5xx retried with backoff, anything else fails at once.
+function poster({ url, apiKey, keySetting, fetchFn, sleep, delays }) {
+  return async function post(body) {
     for (let attempt = 0; ; attempt++) {
       let res;
       try {
@@ -87,7 +105,14 @@ export function createModelClient({ baseUrl, apiKey = '', keySetting = null, fet
       const hint = (res.status === 401 || res.status === 403) && keySetting ? ` (check ${keySetting} in <records>/.env)` : '';
       throw new ModelError(`model endpoint returned ${res.status}${hint}: ${redact(text.slice(0, 300), apiKey)}`, { status: res.status });
     }
-  }
+  };
+}
+
+const defaultSleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+export function createModelClient({ baseUrl, apiKey = '', keySetting = null, fetch: fetchFn = globalThis.fetch, sleep = defaultSleep, delays = RETRY_DELAYS_MS } = {}) {
+  if (!baseUrl) throw new ModelError('no decision model endpoint (set NEBIUS_BASE_URL or PADAKAN_DECISION_BASE_URL)');
+  const post = poster({ url: `${baseUrl.replace(/\/+$/, '')}/chat/completions`, apiKey, keySetting, fetchFn, sleep, delays });
 
   // Ask for JSON matching `schema`. Returns { data, usage, model }.
   async function chatJson({ model, system, user, schema, name = 'answer', temperature = 0 }) {
@@ -113,5 +138,39 @@ export function createModelClient({ baseUrl, apiKey = '', keySetting = null, fet
     return { data, usage: json.usage || null, model: json.model || model };
   }
 
-  return { chatJson };
+  return { kind: 'chat', chatJson };
+}
+
+// A System One client (TypeSafe Jev): one `state`, a map of typed questions (choice, noul, score),
+// answers with calibrated probabilities. It never generates free text, so callers ask questions
+// instead of asking for JSON. Every question must come back with an answer of its own type.
+export function createSystemOneClient({ baseUrl, apiKey = '', model = 'jev-latest', keySetting = 'TYPESAFE_API_KEY', fetch: fetchFn = globalThis.fetch, sleep = defaultSleep, delays = RETRY_DELAYS_MS } = {}) {
+  if (!baseUrl) throw new ModelError('no System One endpoint (set TYPESAFE_BASE_URL)');
+  const post = poster({ url: `${baseUrl.replace(/\/+$/, '')}/systemone`, apiKey, keySetting, fetchFn, sleep, delays });
+
+  async function systemOne({ state, questions }) {
+    const json = await post({ model, state, questions });
+    const answers = json?.answers ?? {};
+    const problems = [];
+    for (const [id, q] of Object.entries(questions)) {
+      const a = answers[id];
+      if (!a || a.type !== q.type) problems.push(`${id}: no ${q.type} answer`);
+      else if (q.type === 'choice' && !(a.choice in q.criteria)) problems.push(`${id}: "${a.choice}" is not an option`);
+      else if (q.type === 'noul' && typeof a.noul !== 'number') problems.push(`${id}: no probability`);
+      else if (q.type === 'score' && typeof a.probabilities !== 'object') problems.push(`${id}: no probabilities`);
+    }
+    if (problems.length) throw new ModelOutputError(`the System One answer is incomplete: ${problems.slice(0, 5).join('; ')}`, { problems, raw: JSON.stringify(json).slice(0, 2000) });
+    return { answers, usage: json.usage || null, model: json.model || model };
+  }
+
+  return { kind: 'systemone', model, systemOne };
+}
+
+// The decision client the settings ask for. Fails before any HTTP call when a key is missing.
+export function createDecisionClient(settings, opts = {}) {
+  const problem = decisionProblem(settings);
+  if (problem) throw new ModelError(problem);
+  const endpoint = { ...decisionEndpoint(settings), keySetting: decisionKeySetting(settings), ...opts };
+  if (decisionProvider(settings) === 'typesafe') return createSystemOneClient({ ...endpoint, model: settings.TYPESAFE_MODEL });
+  return createModelClient(endpoint);
 }

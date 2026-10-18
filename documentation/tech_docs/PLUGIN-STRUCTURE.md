@@ -240,7 +240,9 @@ A marketplace update replaces the plugin folder, so values kept only in the plug
 | Agents and models | `PADAKAN_HARNESS` | `claude` | tree agent: `claude` · `devin` · `openai-compat` |
 | | `PADAKAN_TREE_MODEL` | `claude-sonnet-5-5` | model the tree agent runs |
 | | `CLAUDE_CODE_OAUTH_TOKEN` · `CLAUDE_CODE_OAUTH_FALLBACK_TOKEN` | | tree login (`claude setup-token`) |
+| | `PADAKAN_DECISION_PROVIDER` | `auto` | `nebius` · `openai-compat` · `typesafe` (auto: openai-compat when `PADAKAN_DECISION_BASE_URL` is set) |
 | | `NEBIUS_API_KEY` · `NEBIUS_BASE_URL` | · `https://api.tokenfactory.nebius.com/v1/` | OpenAI-compatible models |
+| | `TYPESAFE_API_KEY` · `TYPESAFE_BASE_URL` · `TYPESAFE_MODEL` | · `https://api.typesafe.ai/v1` · `jev-latest` | System One decisions |
 | | `PADAKAN_TRIAGE_MODEL` · `PADAKAN_RESOLVER_MODEL` | `nvidia/nemotron-3-super-120b-a12b` | decision models (structured output) |
 | | `PADAKAN_BUILDER_MODEL` | | model for the `openai-compat` harness |
 | | `DEVIN_API_URL` | `https://api.devin.ai/v3` | Devin API base URL |
