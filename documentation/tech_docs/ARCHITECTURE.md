@@ -86,7 +86,7 @@ The **registry** (`registry/capabilities.yml` in the plugin) lists everything an
 | Backend / API | none required | curl, docker logs, docker compose, pytest / jest | container logs also feed the monitor loop |
 | Always available | Linear | git, gh, Entire (optional) | skills: TDD, code review, security, debugging, docs |
 
-iOS simulators cannot run in a Linux sandbox, and Android emulators need KVM, which Daytona offers only in Linux VM sandboxes with a 10 GB disk ceiling. Device probes therefore run on a Mac host (the `local` sandbox provider); trees build and run unit tests.
+iOS and macOS work runs on Devin's macOS VMs (Xcode, iOS Simulator, a recorded desktop), chosen per task with the session `platform`. Android emulator support on Devin still needs checking; until then the Mac host (`local` provider) runs Android device probes. Details: `documentation/infrastructure/DEVIN.md`.
 
 ## 6. Build pipeline
 
@@ -111,16 +111,16 @@ task → TREE (loop engine: plan → build → review → test) → VERIFICATION
 
 ## 7. Sandboxes and trees
 
-One tree per task: a sandbox with one repo, one branch, its own signed-in agent and a headless browser. The provider is chosen in `.env` (`PADAKAN_SANDBOX_PROVIDER`).
+One tree per task: a sandbox with one repo, one branch, its own agent and a desktop browser. The provider is chosen in `.env` (`PADAKAN_SANDBOX_PROVIDER`).
 
 | Provider | Use |
 |---|---|
-| `daytona` (default) | Linux container sandboxes from a baked snapshot (Claude Code, herdr, Entire CLI and Graph, Playwright, gh); no secrets in the snapshot |
-| `devin` | a Devin session through the Devin API, several in parallel. Devin runs the task in its own cloud VM; Padakan cannot run herdr or another agent there, so the harness is always Devin and Padakan talks to it only through the API (prompt, messages, structured output, the PR it opens) |
+| `devin` (default) | a Devin session per task, in a fresh VM booted from the organization's snapshot (built from blueprints, `.devin/blueprint.yaml`). Linux, macOS (Xcode, iOS Simulator) or Windows per task. Devin is the agent: Padakan drives it through the API (prompt, messages, structured output, attachments), and it records its own end-to-end test video. Several sessions run in parallel |
+| `daytona` | a Linux container we control, from a baked snapshot (Claude Code, herdr, Entire CLI and Graph, Playwright, gh); for running our own agent instead of Devin |
 | `local` | git worktree on the orchestrator's machine; the Mac device host for iOS and Android |
 
 Lifecycle, run by `tree-operator` through the `orchestrator/` scripts: **plant → attach → brief → poll the effect → verify → evidence → merge → retire.**
-- **herdr is the default terminal and driver:** every tree agent runs in a herdr pane the human can watch; headless only in CI.
+- **Watching a tree:** a Devin session is watched live in Devin's web app (the session URL). Trees on `daytona` or `local` run in a herdr pane; herdr also stays the orchestrator's own terminal.
 - Briefs end with a machine-readable report line: `CI= PR= ACS= EVIDENCE= BLOCKED=`.
 - Poll the effect (commit on the remote, `git status`, CI), never the agent's status field.
 - Retire: the building agent writes a seven-section record (what changed, files, architecture, seams, next step, what a reader will get wrong, what is still open), which is pulled back before the sandbox is deleted. Delete refuses when work is unpushed.
@@ -239,8 +239,8 @@ Every setting is an environment variable documented in the plugin's `.env.exampl
 |---|---|
 | **Nebius Token Factory** (OpenAI-compatible) | triage model, capability resolver, and the `openai-compat` builder harness |
 | **NVIDIA Nemotron** (on Token Factory) | default for the decision models: function calling and structured output suit schema-validated triage and resolver output |
-| **Devin** | `devin` sandbox provider: several cloud sessions in parallel, one per task |
-| **Daytona** | default sandbox provider |
+| **Devin** | default sandbox provider: one session per task in a VM from our snapshot (Linux, macOS, Windows), recorded testing, structured output |
+| **Daytona** | alternative sandbox provider when we run our own agent |
 | **Entire** | optional: sessions as checkpoints linked to commits, local code graph, search over past sessions |
 | **herdr** | terminal where every tree agent runs and can be watched |
 | **Open Knowledge Format** | the format of every document agents write |
