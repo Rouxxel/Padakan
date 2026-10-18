@@ -50,14 +50,31 @@ const inRun = (e, scope) => e.run === scope.run;
 const inTask = (e, scope) => inRun(e, scope) && e.task === scope.task;
 const sum = (entries, field) => entries.reduce((acc, e) => acc + (isNum(e[field]) ? e[field] : 0), 0);
 
-// Spend comes from "spend" lines; a human "approve" adds a one-off allowance ("decision" lines).
+// Spend comes from "spend" lines; a human "approve" adds a one-off allowance ("decision" lines with
+// allowance_usd) for ONE step of one task. The allowance is the approved step's alone:
+//   - for that step (scope.step), all of it is extra room;
+//   - for every other step, only what the approved step has already spent from it is credited back,
+//     so its approved overspend never eats the budget the other steps had.
+// Without scope.step, every allowance counts as far as it is spent.
 export function budgetLeft(ledger, budgets, scope) {
   const spends = ledger.filter((e) => e.kind === 'spend');
-  const allowances = ledger.filter((e) => e.kind === 'decision');
-  const left = (cap, match) =>
-    cap === null || cap === undefined
-      ? Infinity
-      : round6(cap + sum(allowances.filter((e) => match(e, scope)), 'allowance_usd') - sum(spends.filter((e) => match(e, scope)), 'usd'));
+  const allowances = ledger.filter((e) => e.kind === 'decision' && isNum(e.allowance_usd));
+  const left = (cap, match) => {
+    if (cap === null || cap === undefined) return Infinity;
+    const mine = spends.filter((e) => match(e, scope));
+    const byStep = new Map();
+    for (const a of allowances.filter((e) => match(e, scope))) {
+      const k = `${a.task}\u0000${a.step}`;
+      byStep.set(k, { task: a.task, step: a.step, usd: (byStep.get(k)?.usd ?? 0) + a.allowance_usd });
+    }
+    let credit = 0;
+    for (const a of byStep.values()) {
+      const own = scope.step !== undefined && a.task === scope.task && a.step === scope.step;
+      const used = sum(mine.filter((e) => e.task === a.task && e.step === a.step), 'usd');
+      credit += own ? a.usd : Math.min(a.usd, used);
+    }
+    return round6(cap + credit - sum(mine, 'usd'));
+  };
   return { run_usd: left(budgets.run_usd, inRun), task_usd: left(budgets.task_usd, inTask) };
 }
 
@@ -71,7 +88,7 @@ const finiteOrNull = (n) => (Number.isFinite(n) ? n : null);
 
 // Never returns "skip": only a human can skip, and only an optional step (decision report).
 export function gate({ item, ledger = [], budgets, prices, scope }) {
-  const left = budgetLeft(ledger, budgets, scope);
+  const left = budgetLeft(ledger, budgets, { ...scope, step: item.step });
   const step = stepCap(ledger, budgets, scope, item.step);
   const cap = Math.min(step, left.task_usd, left.run_usd);
   const base = {
@@ -96,7 +113,7 @@ export function sessionCap({ item, ledger = [], budgets, prices, scope, hardMax 
   if (item.unit !== 'acu') throw new Error(`sessionCap needs an "acu" item, got "${item.unit}"`);
   const price = prices?.acu;
   if (!isNum(price)) return { decision: 'pause', reason: 'no-price' };
-  const left = budgetLeft(ledger, budgets, scope);
+  const left = budgetLeft(ledger, budgets, { ...scope, step: item.step });
   const capUsd = Math.min(stepCap(ledger, budgets, scope, item.step), left.task_usd, left.run_usd);
   const byBudget = price === 0 ? Infinity : Math.max(0, capUsd) / price;
   const units = Math.min(byBudget, isNum(hardMax) ? hardMax : Infinity);

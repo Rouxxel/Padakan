@@ -347,6 +347,8 @@ sessionCap({ item, ledger, budgets, prices, scope, hardMax })
 
 An unset budget means no cap at that level. A missing price for a unit means `pause` with reason `no-price`, because the gate never assumes something is free.
 
+**Allowances are per step.** A human `approve` writes a `decision` ledger line with `allowance_usd` for one step of one task. When that step is gated, the whole allowance is extra room. When any other step is gated, only the part the approved step has already spent is credited back, so an approved overspend never uses up budget the other steps had, and an unspent allowance is never extra room for them.
+
 ### B.5 Devin session cap
 
 `max_acu_limit` makes Devin stop by itself at the budget, so overspend cannot happen even if Padakan crashes.

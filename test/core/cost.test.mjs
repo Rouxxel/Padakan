@@ -40,6 +40,24 @@ test('C1 a human allowance lifts the caps for that step only', () => {
   assert.equal(other.reason, 'step-cap');
 });
 
+test('C1 an allowance is never extra room for another step, and its spend never eats theirs', () => {
+  const allowance = { kind: 'decision', run: 'r-1', task: 'PAD-12', step: 'video', allowance_usd: 10 };
+  const b = budgets({ task_usd: 12 });
+  const probe = item({ step: 'device-probe' }); // high = $10
+  // Before the approved step spends: the other step sees only the task budget ($12), not $22.
+  assert.equal(budgetLeft([allowance], b, { ...scope, step: 'device-probe' }).task_usd, 12);
+  assert.equal(budgetLeft([allowance], b, { ...scope, step: 'video' }).task_usd, 22);
+  assert.equal(gate({ item: item({ step: 'device-probe', high: 13 }), ledger: [allowance], budgets: b, prices: { acu: 1 }, scope }).reason, 'task-cap');
+  // The approved step spends $8 of its allowance: the other step still has its $12.
+  const spentVideo = spend(8, { step: 'video' });
+  assert.equal(budgetLeft([allowance, spentVideo], b, { ...scope, step: 'device-probe' }).task_usd, 12);
+  assert.equal(gate({ item: probe, ledger: [allowance, spentVideo], budgets: b, prices, scope }).decision, 'run');
+  // It overspends the allowance by $5: only that excess comes out of the shared budget.
+  const over = spend(7, { step: 'video' });
+  assert.equal(budgetLeft([allowance, spentVideo, over], b, { ...scope, step: 'device-probe' }).task_usd, 7);
+  assert.equal(budgetLeft([allowance, spentVideo, over], b, { ...scope, step: 'video' }).task_usd, 7);
+});
+
 // C2: compares against high, never likely.
 test('C2 gate uses high, not likely', () => {
   const g = gate({ item: item({ likely: 1, high: 5 }), budgets: budgets({ step_usd: 5 }), prices, scope });
