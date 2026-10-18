@@ -2,8 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { ROOT } from './helpers.mjs';
-import { parseFrontmatter } from '../core/okf.mjs';
+import { ROOT } from '../helpers/index.mjs';
+import { parseFrontmatter } from '../../core/okf.mjs';
 
 const EXPECTED = [
   'acceptance-tester', 'bug-agent', 'builder', 'capability-resolver', 'design-implementer', 'evidence-builder', 'planner',

@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { readdir, readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { ROOT } from './helpers.mjs';
-import { parseFrontmatter, validateFile } from '../core/okf.mjs';
+import { ROOT } from '../helpers/index.mjs';
+import { parseFrontmatter, validateFile } from '../../core/okf.mjs';
 
 const dir = join(ROOT, 'skills');
 const folders = async () => (await readdir(dir, { withFileTypes: true })).filter((e) => e.isDirectory()).map((e) => e.name).sort();

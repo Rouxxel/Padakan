@@ -2,13 +2,13 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { writeFile, readFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { makeRepo, removeDir } from './helpers.mjs';
-import { createModelClient, decisionEndpoint, extractJson, ModelOutputError, ModelError } from '../core/models.mjs';
-import { buildManifest, proposalSchema, resolve, ResolverError, REGISTRY, availableSkills, MANIFEST_SCHEMA } from '../core/resolver.mjs';
-import { validate } from '../core/schema.mjs';
-import { loadSettings } from '../orchestrator/lib/env.mjs';
-import { buildContext } from '../orchestrator/lib/context.mjs';
-import { STEPS } from '../orchestrator/steps.mjs';
+import { makeRepo, removeDir } from '../helpers/index.mjs';
+import { createModelClient, decisionEndpoint, extractJson, ModelOutputError, ModelError } from '../../core/models.mjs';
+import { buildManifest, proposalSchema, resolve, ResolverError, REGISTRY, availableSkills, MANIFEST_SCHEMA } from '../../core/resolver.mjs';
+import { validate } from '../../core/schema.mjs';
+import { loadSettings } from '../../orchestrator/lib/env.mjs';
+import { buildContext } from '../../orchestrator/lib/context.mjs';
+import { STEPS } from '../../orchestrator/steps.mjs';
 
 const settings = loadSettings({ exported: { PADAKAN_SANDBOX_PROVIDER: 'devin', NEBIUS_API_KEY: 'nb_secret_key_1234' } });
 

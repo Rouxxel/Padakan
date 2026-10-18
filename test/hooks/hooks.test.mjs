@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { writeFile, readFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { ROOT, makeRepo, removeDir, git } from './helpers.mjs';
-import { init } from '../orchestrator/lib/records.mjs';
+import { ROOT, makeRepo, removeDir, git } from '../helpers/index.mjs';
+import { init } from '../../orchestrator/lib/records.mjs';
 
 // Run a hook script with a JSON payload on stdin, as Claude Code does.
 function hook(name, payload, env = {}) {

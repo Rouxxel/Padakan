@@ -49,9 +49,9 @@ sandboxes/
     └── README.md              setup: service user, org id, permissions, Computer Use
 test/
 ├── helpers/mock-devin.mjs     a local node:http server that imitates the v3 endpoints below
-├── devin-client.test.mjs
-├── devin-provider.test.mjs
-└── sandbox-contract.test.mjs  runs the shared contract against every provider
+├── sandboxes/devin/client.test.mjs
+├── sandboxes/devin/provider.test.mjs
+└── sandboxes/contract.test.mjs  runs the shared contract against every provider
 ```
 
 ### A.2 HTTP client (`client.mjs`)

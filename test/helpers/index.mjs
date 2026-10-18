@@ -5,7 +5,7 @@ import { join, dirname } from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-export const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+export const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 // A fresh temporary directory, realpath'd so macOS /var → /private/var does not break comparisons.
 export async function tempDir(prefix = 'padakan-') {

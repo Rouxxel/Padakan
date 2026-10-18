@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import {
   gate, sessionCap, budgetLeft, estimate, record, parseLedger, spendTick,
   remainingEstimate, loadPrices, budgetsFromEnv,
-} from '../core/cost.mjs';
+} from '../../core/cost.mjs';
 
 const scope = { run: 'r-1', task: 'PAD-12' };
 const prices = { acu: 2 };
@@ -111,7 +111,7 @@ test('C6 warn once per session at 80%', () => {
 
 // C7: core/cost.mjs imports nothing (no models, no network).
 test('C7 cost.mjs has no imports and no network', async () => {
-  const src = await readFile(new URL('../core/cost.mjs', import.meta.url), 'utf8');
+  const src = await readFile(new URL('../../core/cost.mjs', import.meta.url), 'utf8');
   assert.doesNotMatch(src, /^\s*import\s/m);
   assert.doesNotMatch(src, /\bimport\(|\brequire\(|\bfetch\(/);
 });

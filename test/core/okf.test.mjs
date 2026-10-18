@@ -2,9 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { ROOT, tempDir, removeDir, runNode } from './helpers.mjs';
-import { parseFrontmatter, validateText, validateFile, validateBundle, linksIn } from '../core/okf.mjs';
-import { init } from '../orchestrator/lib/records.mjs';
+import { ROOT, tempDir, removeDir, runNode } from '../helpers/index.mjs';
+import { parseFrontmatter, validateText, validateFile, validateBundle, linksIn } from '../../core/okf.mjs';
+import { init } from '../../orchestrator/lib/records.mjs';
 
 const doc = (fm, body = '# Body\n') => `---\n${fm}\n---\n\n${body}`;
 const FULL = 'type: Brief\ntitle: A brief\ndescription: What to build.\ntags: [task, brief]\ntimestamp: 2026-10-18T14:22:00Z';

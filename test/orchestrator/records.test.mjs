@@ -2,8 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, writeFile, mkdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
-import { makeRepo, removeDir, git, tempDir } from './helpers.mjs';
-import { mainRepoRoot, recordsDir, init, taskDir, appendLog, loadContext, LAYOUT, readState } from '../orchestrator/lib/records.mjs';
+import { makeRepo, removeDir, git, tempDir } from '../helpers/index.mjs';
+import { mainRepoRoot, recordsDir, init, taskDir, appendLog, loadContext, LAYOUT, readState } from '../../orchestrator/lib/records.mjs';
 
 test('the records folder sits next to the repo, named {repo}-padakan', async () => {
   const { base, repo, parent } = await makeRepo('shop');

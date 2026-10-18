@@ -2,13 +2,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { writeFile, mkdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { ROOT, makeRepo, removeDir, git, runNode } from './helpers.mjs';
-import { buildContext } from '../orchestrator/lib/context.mjs';
-import { createGithub } from '../orchestrator/lib/github.mjs';
-import { STEPS } from '../orchestrator/steps.mjs';
-import { doctor } from '../orchestrator/doctor.mjs';
-import { loadSettings } from '../orchestrator/lib/env.mjs';
-import { readState } from '../orchestrator/lib/state.mjs';
+import { ROOT, makeRepo, removeDir, git, runNode } from '../helpers/index.mjs';
+import { buildContext } from '../../orchestrator/lib/context.mjs';
+import { createGithub } from '../../orchestrator/lib/github.mjs';
+import { STEPS } from '../../orchestrator/steps.mjs';
+import { doctor } from '../../orchestrator/doctor.mjs';
+import { loadSettings } from '../../orchestrator/lib/env.mjs';
+import { readState } from '../../orchestrator/lib/state.mjs';
 
 const okfDoc = (type, title) => `---\ntype: ${type}\ntitle: ${title}\ndescription: ${title} for the test.\ntags: [test]\ntimestamp: 2026-10-18T10:00:00Z\n---\n\n# ${title}\n`;
 

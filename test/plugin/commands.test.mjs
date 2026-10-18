@@ -2,9 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { ROOT } from './helpers.mjs';
-import { parseFrontmatter } from '../core/okf.mjs';
-import { STEPS } from '../orchestrator/steps.mjs';
+import { ROOT } from '../helpers/index.mjs';
+import { parseFrontmatter } from '../../core/okf.mjs';
+import { STEPS } from '../../orchestrator/steps.mjs';
 
 const EXPECTED = ['build', 'decide', 'evidence', 'feature', 'onboard', 'pause', 'plan', 'replay', 'rollback', 'status', 'watch'];
 const dir = join(ROOT, 'commands');

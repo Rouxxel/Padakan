@@ -2,9 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { writeFile, mkdir } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
-import { ROOT, makeRepo, removeDir, git, runNode } from './helpers.mjs';
-import { inspect, globToRegExp, parseDiff } from '../core/diffcheck.mjs';
-import { loadSettings } from '../orchestrator/lib/env.mjs';
+import { ROOT, makeRepo, removeDir, git, runNode } from '../helpers/index.mjs';
+import { inspect, globToRegExp, parseDiff } from '../../core/diffcheck.mjs';
+import { loadSettings } from '../../orchestrator/lib/env.mjs';
 
 const settings = loadSettings({ exported: {} }); // defaults: 60 lines, 3 files, .github/, infra/, **/*.lock
 

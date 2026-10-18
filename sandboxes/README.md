@@ -58,4 +58,4 @@ export async function status(ctx, handle) { return { state: 'working', handle: {
 | `devin` | built (mocked API; live checks in IMPLEMENTATION-DEVIN-COSTGATE.md D.4 pending) | create, brief, status, poll, message, pause, resume, raiseBudget, evidence, retire, destroy, url, spend |
 | `daytona` | later | the shell verbs plus bootstrap and seed |
 
-The shared suite is `test/sandbox-contract.test.mjs`. Add a `describe` block for a new provider that runs the verbs it declares, with its external API mocked. The Devin provider's suite is `test/devin-provider.test.mjs`: it runs every declared verb through this gateway against `test/helpers/mock-devin.mjs`, with `makeProvider()` injecting fake GitHub effects and a fake clock.
+The shared suite is `test/sandboxes/contract.test.mjs`. A provider's own tests go in `test/sandboxes/<provider>/` (for example `test/sandboxes/local/provider.test.mjs`), with its external API mocked in `test/helpers/`. The Devin provider's suite is `test/sandboxes/devin/provider.test.mjs`: it runs every declared verb through this gateway against `test/helpers/mock-devin.mjs`, with `makeProvider()` injecting fake GitHub effects and a fake clock.

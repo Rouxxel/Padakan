@@ -2,8 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { writeFile, mkdir, rm, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { ROOT, tempDir, removeDir, runNode } from './helpers.mjs';
-import { docsGate, checkFeature } from '../core/docs-gate.mjs';
+import { ROOT, tempDir, removeDir, runNode } from '../helpers/index.mjs';
+import { docsGate, checkFeature } from '../../core/docs-gate.mjs';
 
 const fm = (type) => `---\ntype: ${type}\ntitle: Sign-in ${type}\ndescription: ${type} for sign-in.\ntags: [auth]\ntimestamp: 2026-10-18T00:00:00Z\n---\n\n`;
 

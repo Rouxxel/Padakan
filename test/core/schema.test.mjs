@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { validate, assertValid } from '../core/schema.mjs';
+import { validate, assertValid } from '../../core/schema.mjs';
 
 const schema = {
   type: 'object',
