@@ -174,7 +174,7 @@ Padakan/                                  repo root = the plugin
 │   ├── okf.mjs                           OKF validator: type present, ISO timestamp, links resolve
 │   └── harness/                          claude.mjs · devin.mjs · openai-compat.mjs
 ├── schemas/                              task, manifest, decision-report, decision-answer, audit-entry,
-│                                         triage-result, verdict, sandbox-handle
+│                                         triage-result, verdict, sandbox-handle, checks (the checks/*.json contract)
 ├── registry/                             capabilities.json, categories.yml, prices.yml (catalog data, not settings)
 ├── templates/                            evidence-report.md/.html, brand.md, brief.md,
 │                                         decision-report.md, record.md, feature/
