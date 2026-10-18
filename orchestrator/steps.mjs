@@ -14,6 +14,7 @@ import { readState, updateState, updateTask, getTask, treeId, branchFor, assertK
 import { validateFile, validateBundle } from '../core/okf.mjs';
 import { inspect } from '../core/diffcheck.mjs';
 import { verdict, resultLine } from '../core/gates.mjs';
+import { readChecks } from '../core/checks.mjs';
 import { resolve as resolveManifest, resultLine as manifestLine } from '../core/resolver.mjs';
 import { collect } from '../core/collect-logs.mjs';
 import { triage } from '../core/triage.mjs';
@@ -161,19 +162,11 @@ export async function verify(ctx, args) {
     diff = await inspect({ repo: ctx.repo, base: task.base, head, settings: ctx.settings, allowDependencies: manifest.allowDependencies || [] });
   }
   const okf = (await validateBundle(dir)).map((p) => `${relative(ctx.records, p.file).split(sep).join('/')}: ${p.problem}`);
-  const input = {
-    taskTests: await readJson(join(checks, 'tests.json')),
-    acceptance: await readJson(join(checks, 'acceptance.json')),
-    suite: await readJson(join(checks, 'suite.json')),
-    e2e: await readJson(join(checks, 'e2e.json')),
-    diff,
-    okf,
-    evidence: await readJson(join(checks, 'evidence.json')),
-    skipped: task.skipped || [],
-  };
+  const facts = await readChecks({ dir: checks, manifest: manifest.target ? manifest : null });
+  const input = { ...facts.input, diff, okf, invalid: facts.invalid, skipped: task.skipped || [] };
   const v = verdict(input);
   await mkdir(checks, { recursive: true });
-  await writeFile(join(checks, 'verify.json'), `${JSON.stringify({ head, input, ...v }, null, 2)}\n`);
+  await writeFile(join(checks, 'verify.json'), `${JSON.stringify({ head, input, notes: facts.notes, ...v }, null, 2)}\n`);
   await writeOkf(
     join(checks, 'verify.md'),
     {
@@ -181,7 +174,7 @@ export async function verify(ctx, args) {
       title: `${key} · ${v.verdict}`,
       description: `Gates verdict for ${key} at ${head ? head.slice(0, 12) : 'no head'}.`,
       tags: ['verification', v.verdict.toLowerCase()],
-      body: [`# ${key} · ${v.verdict}`, '', `Head: \`${head || 'none'}\``, '', '| Gate | Level | Detail |', '|---|---|---|', ...v.reasons.map((r) => `| ${r.gate} | ${r.level} | ${r.detail.replaceAll('|', '/')} |`), v.reasons.length ? '' : 'All gates passed.'].join('\n'),
+      body: [`# ${key} · ${v.verdict}`, '', `Head: \`${head || 'none'}\``, '', '| Gate | Level | Detail |', '|---|---|---|', ...v.reasons.map((r) => `| ${r.gate} | ${r.level} | ${r.detail.replaceAll('|', '/')} |`), v.reasons.length ? '' : 'All gates passed.', ...(facts.notes.length ? ['', ...facts.notes.map((n) => `- ${n}`)] : [])].join('\n'),
     },
     ctx.now,
   );

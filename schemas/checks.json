@@ -1,0 +1,62 @@
+{
+  "$comment": "The facts agents write to <records>/tasks/<KEY>/checks/ for padakan verify. One schema per file. verify validates each file it reads; an invalid file escalates.",
+  "tests.json": {
+    "$comment": "test-runner: the task's own tests, run inside the full suite.",
+    "type": "object",
+    "required": ["status"],
+    "properties": {
+      "status": { "type": "string", "enum": ["pass", "fail", "not-run"] },
+      "passed": { "type": "integer", "minimum": 0 },
+      "failed": { "type": "integer", "minimum": 0 },
+      "command": { "type": "string" }
+    }
+  },
+  "suite.json": {
+    "$comment": "test-runner: the full regression suite.",
+    "type": "object",
+    "required": ["status"],
+    "properties": {
+      "status": { "type": "string", "enum": ["pass", "fail", "not-run"] },
+      "passed": { "type": "integer", "minimum": 0 },
+      "failed": { "type": "integer", "minimum": 0 },
+      "command": { "type": "string" }
+    }
+  },
+  "acceptance.json": {
+    "$comment": "acceptance-tester: one entry per acceptance criterion, proven on the running system.",
+    "type": "array",
+    "items": {
+      "type": "object",
+      "required": ["id", "result"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^AC[0-9]+$" },
+        "result": { "type": "string", "enum": ["pass", "fail", "unproven", "not-run", "not-exercised"] },
+        "optional": { "type": "boolean" },
+        "evidence": { "type": "string" }
+      }
+    }
+  },
+  "e2e.json": {
+    "$comment": "acceptance-tester: one entry per critical feature whose end-to-end spec was run; [] when none applies.",
+    "type": "array",
+    "items": {
+      "type": "object",
+      "required": ["feature", "verdict"],
+      "properties": {
+        "feature": { "type": "string" },
+        "verdict": { "type": "string", "enum": ["PASS", "KNOWN", "FAIL", "BROKEN", "STOPPED", "NOT RUN"] }
+      }
+    }
+  },
+  "evidence.json": {
+    "$comment": "evidence-builder: each item checked at its source. video may be not-applicable when the task needs no video; ci is none when the repository has no CI.",
+    "type": "object",
+    "required": ["video", "architecture", "files", "ci"],
+    "properties": {
+      "video": { "type": "string", "enum": ["verified", "present", "missing", "not-applicable"] },
+      "architecture": { "type": "string", "enum": ["verified", "present", "missing"] },
+      "files": { "type": "string", "enum": ["verified", "present", "missing"] },
+      "ci": { "type": "string", "enum": ["verified", "present", "missing", "none"] }
+    }
+  }
+}

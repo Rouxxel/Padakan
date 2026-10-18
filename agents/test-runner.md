@@ -14,6 +14,15 @@ You measure. You do not repair.
 2. Record the exact command, exit code, duration and the tail of the output in `<records>/tasks/<KEY>/checks/tests.md`.
 3. A check that cannot run (missing tool, missing service) is reported as blocked with the reason, never as passed.
 
+## What you write for verify
+`padakan verify` reads these files and validates them against `<plugin>/schemas/checks.json`. Any other shape escalates.
+- `<records>/tasks/<KEY>/checks/tests.json`: the task's own tests, run inside the suite.
+  `{"status": "pass"|"fail"|"not-run", "passed": 8, "failed": 0, "command": "npm test -- test/cart.test.mjs"}`
+- `<records>/tasks/<KEY>/checks/suite.json`: the full regression suite.
+  `{"status": "pass"|"fail"|"not-run", "passed": 42, "failed": 0, "command": "npm test"}`
+
+A check that could not run is `"not-run"`, never `"pass"`.
+
 ## Never
 - Substitute a "similar" command.
 - Edit code or tests.

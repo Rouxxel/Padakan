@@ -89,3 +89,19 @@ test('the result line is one line for the orchestrator', () => {
   assert.ok(!line.includes('\n'));
   assert.deepEqual(NEVER_SKIPPED, ['taskTests', 'suite', 'diff']);
 });
+
+test('requirements from the manifest: video only for UI targets; no CI means a human merges; invalid files escalate', () => {
+  const backend = with_({ evidence: { video: 'not-applicable', architecture: 'verified', files: 'verified', ci: 'verified' }, requires: { video: false } });
+  assert.equal(verdict(backend).verdict, 'SHIP');
+  const missingVideo = with_({ evidence: { video: 'missing', architecture: 'verified', files: 'verified', ci: 'verified' }, requires: { video: false } });
+  assert.equal(verdict(missingVideo).verdict, 'SHIP', 'a backend task does not need a video');
+  const ui = with_({ evidence: { video: 'not-applicable', architecture: 'verified', files: 'verified', ci: 'verified' } });
+  assert.equal(verdict(ui).verdict, 'ESCALATE', 'without requires, video is required');
+  const noCi = with_({ evidence: { video: 'verified', architecture: 'verified', files: 'verified', ci: 'none' } });
+  const v = verdict(noCi);
+  assert.equal(v.verdict, 'HUMAN_MERGE');
+  assert.match(v.reasons[0].detail, /no CI configured/);
+  const bad = verdict(with_({ invalid: ['checks/tests.json: value.status: "ok" not in enum'] }));
+  assert.equal(bad.verdict, 'ESCALATE');
+  assert.equal(bad.reasons[0].gate, 'checks');
+});

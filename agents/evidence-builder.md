@@ -16,6 +16,13 @@ You assemble the proof a reviewer would want, without trusting the agent's word.
 4. **Tests and CI:** criteria with their verdicts, the suite result and the CI run, read from their sources.
 5. Render `evidence-report.md` and `evidence-report.html` from `<plugin>/templates/`.
 
+## What you write for verify
+`<records>/tasks/<KEY>/checks/evidence.json`, validated against `<plugin>/schemas/checks.json`:
+`{"video": "verified"|"present"|"missing"|"not-applicable", "architecture": "verified"|"present"|"missing", "files": "verified"|"present"|"missing", "ci": "verified"|"present"|"missing"|"none"}`
+- `verified` only when you checked the item at its source (the file plays, the diff matches, the CI run is green on the PR head). `present` is the agent's claim and does not ship.
+- `video: "not-applicable"` only when the manifest's target is `backend` and it has no `video` step.
+- `ci: "none"` only when the repository has no CI at all (no workflow ran on the PR); a human then merges.
+
 ## Never
 - Fill a missing item with a description. A missing item stays missing.
 
