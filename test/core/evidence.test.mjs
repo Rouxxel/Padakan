@@ -2,14 +2,14 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { writeFile, mkdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { makeRepo, removeDir, git } from './helpers.mjs';
-import { buildPack, renderHtml, renderMarkdown, filesFromGit } from '../core/report.mjs';
-import { validateFile } from '../core/okf.mjs';
-import { verdict } from '../core/gates.mjs';
-import { loadSettings } from '../orchestrator/lib/env.mjs';
-import { buildContext } from '../orchestrator/lib/context.mjs';
-import { STEPS } from '../orchestrator/steps.mjs';
-import { updateTask } from '../orchestrator/lib/state.mjs';
+import { makeRepo, removeDir, git } from '../helpers/index.mjs';
+import { buildPack, renderHtml, renderMarkdown, filesFromGit } from '../../core/report.mjs';
+import { validateFile } from '../../core/okf.mjs';
+import { verdict } from '../../core/gates.mjs';
+import { loadSettings } from '../../orchestrator/lib/env.mjs';
+import { buildContext } from '../../orchestrator/lib/context.mjs';
+import { STEPS } from '../../orchestrator/steps.mjs';
+import { updateTask } from '../../orchestrator/lib/state.mjs';
 
 async function setup() {
   const env = await makeRepo('shop');

@@ -2,8 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { ROOT, tempDir, removeDir } from './helpers.mjs';
-import { SETTINGS, loadSettings, parseEnv, renderExample, SettingsError } from '../orchestrator/lib/env.mjs';
+import { ROOT, tempDir, removeDir } from '../helpers/index.mjs';
+import { SETTINGS, loadSettings, parseEnv, renderExample, SettingsError } from '../../orchestrator/lib/env.mjs';
 
 async function withFiles(records, plugin, fn) {
   const dir = await tempDir();

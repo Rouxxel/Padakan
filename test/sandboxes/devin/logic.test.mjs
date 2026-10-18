@@ -1,10 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { mapStatus, verifyDone, doneCandidateExpired, REPORT_SCHEMA, RETIRE_SCHEMA, DONE_CANDIDATE, DONE_TIMEOUT_MS } from '../sandboxes/devin/state.mjs';
-import { answer, onceThenEscalate, REPLIES, MAX_ANSWERS } from '../sandboxes/devin/answers.mjs';
-import { renderPrompt, renderContinuation, renderRetireMessage, branchFor } from '../sandboxes/devin/prompt.mjs';
-import { STATES } from '../sandboxes/contract.mjs';
+import { mapStatus, verifyDone, doneCandidateExpired, REPORT_SCHEMA, RETIRE_SCHEMA, DONE_CANDIDATE, DONE_TIMEOUT_MS } from '../../../sandboxes/devin/state.mjs';
+import { answer, onceThenEscalate, REPLIES, MAX_ANSWERS } from '../../../sandboxes/devin/answers.mjs';
+import { renderPrompt, renderContinuation, renderRetireMessage, branchFor } from '../../../sandboxes/devin/prompt.mjs';
+import { STATES } from '../../../sandboxes/contract.mjs';
 
 // P4: every row of the A.5 table maps to the right state (table-driven).
 test('P4 status mapping', () => {
@@ -70,7 +70,7 @@ test('P6 invalid structured output is not done', () => {
 });
 
 test('report schema is self-contained (Devin rejects external $ref)', async () => {
-  const text = await readFile(new URL('../sandboxes/devin/schemas/report.json', import.meta.url), 'utf8');
+  const text = await readFile(new URL('../../../sandboxes/devin/schemas/report.json', import.meta.url), 'utf8');
   assert.doesNotMatch(text, /"\$ref"/);
   assert.ok(Buffer.byteLength(text) < 64 * 1024);
   assert.deepEqual(REPORT_SCHEMA.required, ['task', 'pr_url', 'branch', 'acs', 'evidence', 'blocked']);

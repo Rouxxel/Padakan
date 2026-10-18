@@ -2,9 +2,9 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { createClient, DevinError, redact, RETRY_DELAYS_MS } from '../sandboxes/devin/client.mjs';
-import { startMockDevin } from './helpers/mock-devin.mjs';
-import { tempDir, removeDir } from './helpers.mjs';
+import { createClient, DevinError, redact, RETRY_DELAYS_MS } from '../../../sandboxes/devin/client.mjs';
+import { startMockDevin } from '../../helpers/mock-devin.mjs';
+import { tempDir, removeDir } from '../../helpers/index.mjs';
 
 let mock;
 let sleeps;

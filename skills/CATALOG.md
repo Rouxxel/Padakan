@@ -1,7 +1,7 @@
 ---
 type: Catalog
 title: Padakan skills
-description: Every skill the plugin ships, with when to load it. Kept in sync with the folders by test/skills.test.mjs.
+description: Every skill the plugin ships, with when to load it. Kept in sync with the folders by test/plugin/skills.test.mjs.
 tags: [skills, catalog]
 timestamp: 2026-10-18T00:00:00Z
 ---

@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import { readFile, writeFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { spawn } from 'node:child_process';
-import { ROOT, tempDir, removeDir, runNode } from './helpers.mjs';
-import { openAudit, canonical, GENESIS } from '../core/audit.mjs';
-import { init } from '../orchestrator/lib/records.mjs';
+import { ROOT, tempDir, removeDir, runNode } from '../helpers/index.mjs';
+import { openAudit, canonical, GENESIS } from '../../core/audit.mjs';
+import { init } from '../../orchestrator/lib/records.mjs';
 
 async function withRecords(fn) {
   const dir = join(await tempDir(), 'shop-padakan');
@@ -67,7 +67,7 @@ test('a rewritten entry with a recomputed hash still fails, because of the signa
   await withRecords(async (dir) => {
     const audit = openAudit(dir, { log: false });
     await seed(audit);
-    const { entryHash } = await import('../core/audit.mjs');
+    const { entryHash } = await import('../../core/audit.mjs');
     const ls = await lines(audit.files.chainFile);
     const e = JSON.parse(ls[4]);
     e.event.summary = 'forged';

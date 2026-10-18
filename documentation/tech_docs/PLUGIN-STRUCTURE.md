@@ -277,7 +277,7 @@ The numbers above are placeholders to settle when each module is built.
 
 ## 7. Sandbox provider contract
 
-`sandboxes/index.mjs` loads `sandboxes/${PADAKAN_SANDBOX_PROVIDER}/provider.mjs`. Every provider exports `name`, a `capabilities` array listing the verbs it supports, and those verbs as async functions. `test/sandbox-contract.test.mjs` runs the same suite against each provider, for the verbs that provider declares. Calling an undeclared verb throws `UnsupportedVerb`; it never fails silently. The gateway also enforces `PADAKAN_MAX_TREES` by counting live handles.
+`sandboxes/index.mjs` loads `sandboxes/${PADAKAN_SANDBOX_PROVIDER}/provider.mjs`. Every provider exports `name`, a `capabilities` array listing the verbs it supports, and those verbs as async functions. `test/sandboxes/contract.test.mjs` runs the same suite against each provider (and each provider has its own folder, `test/sandboxes/<provider>/`), for the verbs that provider declares. Calling an undeclared verb throws `UnsupportedVerb`; it never fails silently. The gateway also enforces `PADAKAN_MAX_TREES` by counting live handles.
 
 Devin is API-only, so it does not declare the shell verbs (`bootstrap`, `seed`, `exec`, `push`, `pull`). It adds `message`, `pause`, `resume`, `spend` and `raiseBudget`.
 

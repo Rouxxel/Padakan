@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { verdict, resultLine, NEVER_SKIPPED } from '../core/gates.mjs';
+import { verdict, resultLine, NEVER_SKIPPED } from '../../core/gates.mjs';
 
 // Everything green.
 const good = () => ({

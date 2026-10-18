@@ -2,12 +2,12 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { makeRepo, removeDir, tempDir } from './helpers.mjs';
-import { gatedDeploy, simulatedAdapter, adapterFor, DeployError } from '../core/deploy.mjs';
-import { loadSettings } from '../orchestrator/lib/env.mjs';
-import { buildContext } from '../orchestrator/lib/context.mjs';
-import { STEPS } from '../orchestrator/steps.mjs';
-import { updateTask, readState } from '../orchestrator/lib/state.mjs';
+import { makeRepo, removeDir, tempDir } from '../helpers/index.mjs';
+import { gatedDeploy, simulatedAdapter, adapterFor, DeployError } from '../../core/deploy.mjs';
+import { loadSettings } from '../../orchestrator/lib/env.mjs';
+import { buildContext } from '../../orchestrator/lib/context.mjs';
+import { STEPS } from '../../orchestrator/steps.mjs';
+import { updateTask, readState } from '../../orchestrator/lib/state.mjs';
 
 const settings = loadSettings({ exported: { PADAKAN_SANDBOX_PROVIDER: 'local', PADAKAN_SLO_ERROR_RATE: '0.02', PADAKAN_CANARY_PERCENT: '10' } });
 const release = { task: 'PAD-1', head: 'a'.repeat(40) };

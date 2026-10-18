@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, access } from 'node:fs/promises';
 import { join } from 'node:path';
-import { ROOT, makeRepo, removeDir, git } from './helpers.mjs';
+import { ROOT, makeRepo, removeDir, git } from '../helpers/index.mjs';
 
 const readJson = async (p) => JSON.parse(await readFile(join(ROOT, p), 'utf8'));
 

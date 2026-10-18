@@ -2,14 +2,14 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { writeFile, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { makeRepo, removeDir, tempDir } from './helpers.mjs';
-import { parseEvents, cluster, fingerprint, normalize, collect } from '../core/collect-logs.mjs';
-import { triage, route, CATEGORIES } from '../core/triage.mjs';
-import { validateFile } from '../core/okf.mjs';
-import { loadSettings } from '../orchestrator/lib/env.mjs';
-import { buildContext } from '../orchestrator/lib/context.mjs';
-import { STEPS } from '../orchestrator/steps.mjs';
-import { readState } from '../orchestrator/lib/state.mjs';
+import { makeRepo, removeDir, tempDir } from '../helpers/index.mjs';
+import { parseEvents, cluster, fingerprint, normalize, collect } from '../../core/collect-logs.mjs';
+import { triage, route, CATEGORIES } from '../../core/triage.mjs';
+import { validateFile } from '../../core/okf.mjs';
+import { loadSettings } from '../../orchestrator/lib/env.mjs';
+import { buildContext } from '../../orchestrator/lib/context.mjs';
+import { STEPS } from '../../orchestrator/steps.mjs';
+import { readState } from '../../orchestrator/lib/state.mjs';
 
 const LOG = `2026-10-18T10:00:01Z INFO server started on :3000
 2026-10-18T10:00:05Z ERROR TypeError: Cannot read properties of undefined (reading 'total') in order 8f14e45f-ceea-467f-a9f0-0f2d3e5c1a11
