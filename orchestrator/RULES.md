@@ -30,7 +30,7 @@ Everything else is delegated. Reading code, logs, diffs, transcripts, sandbox sc
 
 ## When you may talk to the human
 
-- **Once, at the plan gate** (`/padakan:plan`): PRD, task plan and stories, capability manifests, budget, `brand.md`, and whether to connect the repo to Entire.
+- **Once, at the plan gate** (`/padakan:plan`): PRD, task plan and stories, budget, `brand.md`, and whether to connect the repo to Entire. The tools each task gets are chosen by the capability resolver, never asked of the human.
 - **After that, only for cost**: when a step would break the budget, pause that tree, send a decision report and wait. Nothing else is ever asked.
 - Any other uncertainty is decided by rule or escalated as a ticket. An escalation never blocks other work.
 

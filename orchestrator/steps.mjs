@@ -10,7 +10,7 @@ import { cp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { init as initRecords, taskDir } from './lib/records.mjs';
-import { readState, updateTask, getTask, treeId, branchFor, assertKey } from './lib/state.mjs';
+import { readState, updateState, updateTask, getTask, treeId, branchFor, assertKey } from './lib/state.mjs';
 import { validateFile, validateBundle } from '../core/okf.mjs';
 import { inspect } from '../core/diffcheck.mjs';
 import { verdict, resultLine } from '../core/gates.mjs';
@@ -209,6 +209,37 @@ export async function recycle(ctx, args) {
   return ok(`TREE=${fresh.id} RECYCLED=yes FROM=${sha.slice(0, 12)}`);
 }
 
+// ── gate open|close: the plan gate is the only window in which the human may be asked ───────────
+export async function gate(ctx, args) {
+  const action = args[0];
+  if (!['open', 'close'].includes(action)) return fail('GATE=unchanged REASON="use: padakan gate open|close"');
+  await updateState(ctx.records, (s) => {
+    s.gate = action === 'open' ? 'plan' : null;
+  });
+  await ctx.audit.append({ type: `gate.${action}`, summary: `plan gate ${action === 'open' ? 'opened' : 'closed'}` });
+  return ok(`GATE=${action === 'open' ? 'plan' : 'closed'}`);
+}
+
+// ── pause <KEY|all>: the kill switch. Stops spending where the provider can, and stops every step. ──
+export async function pause(ctx, args) {
+  const target = args[0];
+  if (!target) return fail('PAUSED=0 REASON="use: padakan pause <KEY|all>"');
+  const s = await readState(ctx.records);
+  const keys = target === 'all' ? Object.keys(s.tasks || {}).filter((k) => !['merged', 'retired', 'done', 'paused'].includes(s.tasks[k].status)) : [assertKey(target)];
+  let stopped = 0;
+  for (const key of keys) {
+    const t = s.tasks?.[key];
+    if (!t) return fail(`PAUSED=0 REASON="no task ${key}"`);
+    if (t.tree && (await ctx.gateway.list()).some((h) => h.id === t.tree) && (await ctx.gateway.supports(t.tree, 'pause'))) {
+      await ctx.gateway.pause(t.tree);
+      stopped++;
+    }
+    await updateTask(ctx.records, key, { status: 'paused', paused_from: t.status }, ctx.now);
+    await ctx.audit.append({ type: 'task.paused', task: key, summary: 'paused by the kill switch' });
+  }
+  return ok(`PAUSED=${keys.length} TREES_STOPPED=${stopped}`);
+}
+
 // ── status / ls: read-only views ────────────────────────────────────────────────────────────────
 export async function status(ctx) {
   const s = await readState(ctx.records);
@@ -223,4 +254,4 @@ export async function ls(ctx) {
   return ok(`TREES=${handles.length}`, handles.map((h) => `${h.id}\t${h.provider}\t${h.state}\t${h.task || '-'}\t${h.url || h.path || '-'}`));
 }
 
-export const STEPS = { init, plant, attach, brief, poll, verify, evidence, merge, retire, recycle, status, ls };
+export const STEPS = { init, gate, pause, plant, attach, brief, poll, verify, evidence, merge, retire, recycle, status, ls };

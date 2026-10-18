@@ -170,3 +170,22 @@ test('bin/padakan runs a step from the repository and prints its result line las
     await removeDir(p.base);
   }
 });
+
+test('gate opens and closes the plan window; pause stops tasks', async () => {
+  const p = await project();
+  try {
+    await run(p.ctx, 'init');
+    assert.equal((await run(p.ctx, 'gate', 'open')).line, 'GATE=plan');
+    assert.equal((await readState(p.records)).gate, 'plan');
+    assert.equal((await run(p.ctx, 'gate', 'close')).line, 'GATE=closed');
+    assert.equal((await run(p.ctx, 'gate', 'sideways')).code, 1);
+    await run(p.ctx, 'plant', 'PAD-20');
+    await run(p.ctx, 'plant', 'PAD-21');
+    assert.equal((await run(p.ctx, 'pause', 'all')).line, 'PAUSED=2 TREES_STOPPED=0');
+    const s = await readState(p.records);
+    assert.equal(s.tasks['PAD-20'].status, 'paused');
+    assert.equal(s.tasks['PAD-20'].paused_from, 'planted');
+  } finally {
+    await removeDir(p.base);
+  }
+});

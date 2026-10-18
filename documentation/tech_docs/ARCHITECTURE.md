@@ -67,16 +67,17 @@ Read next:
 The human and the orchestrator agree, once:
 1. the **PRD** (architecture, tech stack, security);
 2. the **task plan** and its **user stories**, each with acceptance criteria;
-3. each task's **capability manifest** (what every agent will be equipped with);
-4. the **budget** (caps per run, task and step, written to `.env`);
-5. the **brand file** `brand.md` (logo, palette, typography, voice), which the designer agents and the report generator read;
-6. if Entire is enabled and the repo is not connected: **connect the repo to Entire** for search? Yes sets `ENTIRE_SEARCH=on`; no leaves search off. Asked once.
+3. the **budget** (caps per run, task and step, written to `.env`);
+4. the **brand file** `brand.md` (logo, palette, typography, voice), which the designer agents and the report generator read;
+5. if Entire is enabled and the repo is not connected: **connect the repo to Entire** for search? Yes sets `ENTIRE_SEARCH=on`; no leaves search off. Asked once.
 
 After this gate, the human is asked again only by the cost gate (section 9).
 
 ## 5. Capability registry and resolver
 
 The **registry** (`registry/capabilities.yml` in the plugin) lists everything an agent can be given. The **capability resolver** is a decision model with schema-validated output: for each task it reads the PRD's tech stack and the task and returns a manifest. A tree starts with only what its manifest names, so its agent can validate its own work.
+
+**The resolver decides; the human does not.** Choosing tools is a model's job: the manifests are produced automatically after the plan is approved and are shown to the human only for information. The resolver runs on Nemotron through Nebius by default; any OpenAI-compatible endpoint works, including a local model server (issue #16). Its output is schema-validated, and an invalid manifest is a failed check, not a question.
 
 | Target | MCP servers | CLI tools | Notes |
 |---|---|---|---|
