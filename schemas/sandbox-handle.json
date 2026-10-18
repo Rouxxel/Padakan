@@ -1,0 +1,28 @@
+{
+  "$comment": "A sandbox handle: <records>/sandboxes/<id>.json. Written only by the gateway (orchestrator side) from what a provider returns. Never holds a secret.",
+  "type": "object",
+  "required": ["id", "provider", "state", "created_at"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,38}$" },
+    "provider": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+    "task": { "type": "string" },
+    "state": { "type": "string", "enum": ["provisioning", "ready", "working", "waiting", "paused", "done", "failed", "gone"] },
+    "created_at": { "type": "string" },
+    "updated_at": { "type": "string" },
+    "repo": { "type": "string" },
+    "branch": { "type": "string" },
+    "base_sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "path": { "type": "string" },
+    "url": { "type": ["string", "null"] },
+    "session_id": { "type": "string" },
+    "platform": { "type": "string" },
+    "max_acu_limit": { "type": "integer", "minimum": 1 },
+    "acus_last": { "type": "number", "minimum": 0 },
+    "acus_previous": { "type": "number", "minimum": 0 },
+    "previous_session_ids": { "type": "array", "items": { "type": "string" } },
+    "questions_answered": { "type": "integer", "minimum": 0 },
+    "message_cursor": { "type": ["string", "null"] },
+    "last_error": { "type": ["string", "null"] }
+  },
+  "additionalProperties": true
+}
