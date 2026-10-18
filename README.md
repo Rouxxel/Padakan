@@ -87,6 +87,7 @@ In Claude Code (2.1.275 or later):
 | Sandbox gateway and contract, `local` provider | done |
 | Agents (14), skills (13), hooks (4), commands (11) | done |
 | Lifecycle steps and `bin/padakan`, capability resolver, monitor loop | done |
+| `daytona` provider (snapshot, seed, bootstrap, herdr attach) | done ([#46](https://github.com/Rouxxel/Padakan/issues/46)) |
 | `devin` provider, cost gate and decision report | in progress ([#10](https://github.com/Rouxxel/Padakan/issues/10), [#6](https://github.com/Rouxxel/Padakan/issues/6)) |
 | Evidence pack builder, gated deploy (simulated target), CI docs gate and e2e templates | done |
 

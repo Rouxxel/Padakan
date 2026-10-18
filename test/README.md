@@ -17,7 +17,8 @@ test/
 ├── helpers/                 shared helpers and mocks (never contain tests)
 │   ├── index.mjs            temp dirs, real git repos, runNode(), ROOT
 │   ├── sandbox.mjs          a project with a bare remote and records; an in-memory fake provider
-│   └── mock-devin.mjs       a local HTTP server that imitates the Devin v3 API
+│   ├── mock-devin.mjs       a local HTTP server that imitates the Devin v3 API
+│   └── mock-daytona.mjs     a stand-in for the daytona CLI: each sandbox is a temp HOME, exec runs /bin/sh
 ├── core/                    one file per module in core/ (okf, audit, diffcheck, gates, cost, …)
 ├── orchestrator/            env, records, decisions, and lifecycle (the steps in orchestrator/steps.mjs)
 ├── hooks/                   the Claude Code hooks, run as Claude Code runs them
@@ -26,7 +27,7 @@ test/
     ├── contract.test.mjs    the gateway's guarantees and the contract every provider must meet
     ├── local/               the local provider (git worktrees)
     ├── devin/               the Devin provider: API client, state mapping and answers, provider verbs
-    └── daytona/             the Daytona provider, when it lands
+    └── daytona/             the Daytona provider: real remote scripts run against mock-daytona.mjs
 ```
 
 ## Where a new test goes
