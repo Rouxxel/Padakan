@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { writeFile, mkdir, readFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { ROOT, makeRepo, removeDir, git, runNode } from '../helpers/index.mjs';
 import { buildContext } from '../../orchestrator/lib/context.mjs';
@@ -94,7 +95,7 @@ test('the full lifecycle: init → plant → brief → work → poll → verify 
     assert.deepEqual(p.fake.merged, [7]);
 
     const retired = await run(p.ctx, 'retire', 'PAD-12');
-    assert.equal(retired.line, 'TREE=pad-12 RECORD=none DESTROYED=yes');
+    assert.equal(retired.line, 'TREE=pad-12 RECORD=missing DESTROYED=yes');
 
     const audit = await p.ctx.audit.verify();
     assert.equal(audit.ok, true);
@@ -139,6 +140,44 @@ test('recycle replaces a tree from the remote branch, and refuses when nothing w
   }
 });
 
+test('recycle never destroys before it knows it can recreate, and never discards unsaved work without --force', async () => {
+  const p = await project();
+  try {
+    await run(p.ctx, 'init');
+    await run(p.ctx, 'plant', 'PAD-15');
+    await p.ctx.gateway.exec('pad-15', 'echo x > x.txt && git add x.txt && git commit -q -m x && git push -q origin HEAD && echo scratch > scratch.txt');
+    const tree = (await p.ctx.gateway.get('pad-15')).path;
+
+    // Unsaved work: refused, the tree and its scratch file stay.
+    const dirty = await run(p.ctx, 'recycle', 'PAD-15');
+    assert.equal(dirty.code, 1);
+    assert.match(dirty.line, /RECYCLED=no REASON=".*1 uncommitted.*recycle PAD-15 --force/);
+    assert.ok(existsSync(join(tree, 'scratch.txt')));
+
+    // The new tree could not be created (relative remote): refused before anything is destroyed.
+    const url = git(p.repo, 'remote', 'get-url', 'origin');
+    git(p.repo, 'remote', 'set-url', 'origin', '../../remote.git'); // resolves from the repo, not from a tree
+    const pre = await run(p.ctx, 'recycle', 'PAD-15', '--force');
+    assert.match(pre.line, /RECYCLED=no REASON=".*relative path/);
+    assert.deepEqual(pre.details, ['the old tree was left as it is']);
+    assert.ok(existsSync(join(tree, 'scratch.txt')), 'nothing was destroyed');
+    git(p.repo, 'remote', 'set-url', 'origin', url);
+
+    // --force discards it, and the destroy is on the audit trail.
+    const forced = await run(p.ctx, 'recycle', 'PAD-15', '--force');
+    assert.match(forced.line, /^TREE=pad-15 RECYCLED=yes/);
+    assert.equal(existsSync(join(tree, 'scratch.txt')), false);
+    const types = (await p.ctx.audit.replay({ task: 'PAD-15' })).map((e) => e.event.type);
+    assert.ok(types.includes('tree.destroyed') && types.at(-1) === 'tree.recycled', types.join(','));
+
+    const a = await run(p.ctx, 'audit', 'PAD-15');
+    assert.match(a.line, /^AUDIT=ok ENTRIES=\d+$/);
+    assert.ok(a.details.some((l) => l.includes('tree.destroyed')));
+  } finally {
+    await removeDir(p.base);
+  }
+});
+
 test('doctor prints one line per check and a verdict', async () => {
   const p = await project();
   try {
@@ -149,6 +188,7 @@ test('doctor prints one line per check and a verdict', async () => {
     assert.ok(d.details.includes('CHECK gh fail not logged in'));
     assert.ok(d.details.some((l) => /^CHECK provider ok local$/.test(l)));
     assert.ok(d.details.some((l) => /^CHECK settings ok/.test(l)));
+    assert.ok(d.details.some((l) => /^CHECK tracker warn PADAKAN_TRACKER=github but origin is /.test(l)), 'a non-GitHub origin with the github tracker is a warning');
     assert.ok(d.details.some((l) => /^CHECK decision-model warn no decision model key: set NEBIUS_API_KEY/.test(l)), 'a missing model key is a warning, not ok');
     const keyed = await doctor({ ...p.ctx, settings: loadSettings({ exported: { PADAKAN_SANDBOX_PROVIDER: 'local', GIT_AUTHOR_NAME: 'T', GIT_AUTHOR_EMAIL: 't@e.st', NEBIUS_API_KEY: 'nb_key_1234' } }) }, { probe });
     assert.ok(keyed.details.some((l) => /^CHECK decision-model ok nebius https:\/\/api\.tokenfactory\.nebius\.com/.test(l)));
@@ -170,6 +210,13 @@ test('bin/padakan runs a step from the repository and prints its result line las
     assert.equal(bad.code, 1);
     assert.match(bad.stdout, /^ERROR=".*invalid task key/m);
     assert.equal(runNode(join(ROOT, 'bin', 'padakan'), ['nosuch'], { cwd: p.repo, env }).code, 2);
+    const noKey = runNode(join(ROOT, 'bin', 'padakan'), ['brief'], { cwd: p.repo, env });
+    assert.equal(noKey.code, 2);
+    assert.equal(noKey.stdout.trim(), 'ERROR="missing argument" USE="padakan brief <KEY> <brief.md>"');
+    const badSetting = runNode(join(ROOT, 'bin', 'padakan'), ['status'], { cwd: p.repo, env: { ...env, PADAKAN_MAX_TREES: 'many' } });
+    const lines = badSetting.stdout.trim().split('\n');
+    assert.match(lines.at(-1), /^ERROR="Invalid Padakan settings:" STEP=status$/);
+    assert.ok(lines.some((l) => /PADAKAN_MAX_TREES/.test(l)) && !badSetting.stdout.includes('\\n'), 'detail lines, no literal \\n');
   } finally {
     await removeDir(p.base);
   }
