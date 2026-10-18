@@ -1,0 +1,28 @@
+# Padakan CI docs gate. Copy to .github/workflows/ in the repository Padakan works on.
+# Fails the pull request when a critical feature's five documents, stories, criteria or labelled
+# assertions do not line up, then type-checks the specs with the project's own compiler.
+name: padakan-docs-gate
+
+on:
+  pull_request:
+    paths:
+      - "features/**"
+
+permissions:
+  contents: read
+
+jobs:
+  docs-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Fetch Padakan
+        run: git clone --depth 1 https://github.com/Rouxxel/Padakan.git "$RUNNER_TEMP/padakan"
+      - name: Docs gate
+        run: node "$RUNNER_TEMP/padakan/core/docs-gate.mjs" features
+      - name: Type-check the specs
+        if: hashFiles('tsconfig.json') != ''
+        run: npx --yes tsc --noEmit
