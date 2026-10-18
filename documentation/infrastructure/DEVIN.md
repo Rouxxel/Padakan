@@ -119,6 +119,12 @@ Still unconfirmed, waiting on the implementer's first live session:
 - The exact body field of `POST …/messages`.
 - Filename and extension of the testing-mode recording attachment.
 
+What the API reference says about the first two (read while building `sandboxes/devin/client.mjs`; still to be confirmed live):
+- `GET …/sessions` has cursor pagination (`first`, `after`) and filters such as `tags`, `is_archived`, `session_ids` and `repo_names`. It returns `{ items, total, has_next_page, end_cursor }`. The client sends array filters as repeated query parameters (`tags=a&tags=b`); the live call must confirm that encoding.
+- `POST …/messages` takes `{ "message": "<text>" }`, optionally with `attachment_urls`. `GET …/messages` is paginated the same way, and items carry `event_id`, `message`, `source`, `origin` and `created_at`.
+- `POST …/attachments` takes multipart/form-data with one field, `file`, and returns `{ attachment_id, name, url }`.
+- `POST …/sessions/{devin_id}/tags`: the body shape (`{ "tags": [...] }` in the client) is not confirmed.
+
 ## Sources
 
 - API overview: https://docs.devin.ai/api-reference/overview
