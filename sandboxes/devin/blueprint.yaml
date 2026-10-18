@@ -1,0 +1,50 @@
+# Starting point for the target repository's .devin/blueprint.yaml (IMPLEMENTATION-DEVIN-COSTGATE.md A.10).
+# Onboarding offers it; committing it to the target repo is a human action at the plan gate.
+# Devin builds the org snapshot from it, and every Padakan tree (Devin session) boots from that snapshot.
+#
+# Rules:
+#   - No secrets here. Sessions get secrets through secret_ids at create time.
+#   - Replace the <...> commands with the repository's own; keep maintenance fast and incremental.
+#   - A repository-level blueprint cannot have post-build (organization and enterprise only), so the
+#     smoke check lives in `knowledge` as an instruction, and in the repository's CI.
+# Reference: https://docs.devin.ai/onboard-devin/environment/blueprint-reference
+
+initialize:
+  - name: "Node 22"
+    uses: github.com/actions/setup-node@v4
+    with:
+      node-version: "22"
+  - name: "GitHub CLI and ffmpeg"
+    run: |
+      command -v gh >/dev/null || (apt-get update && apt-get install -y gh)
+      command -v ffmpeg >/dev/null || (apt-get update && apt-get install -y ffmpeg)
+  - name: "Playwright with browsers (the web verify kit)"
+    run: |
+      npm install -g playwright @playwright/mcp
+      npx playwright install --with-deps chromium
+
+maintenance:
+  - name: "Project dependencies"
+    run: <npm ci | pnpm install --frozen-lockfile | pip install -r requirements.txt>
+
+knowledge:
+  - name: lint
+    contents: |
+      <npm run lint>
+  - name: test
+    contents: |
+      Unit tests: <npm test>
+      A single file: <npm test -- path/to/file.test.ts>
+  - name: e2e
+    contents: |
+      Critical-flow end-to-end tests: <npx playwright test>
+      Never against production; use the PR preview or a local server.
+  - name: smoke
+    contents: |
+      Before starting a task, run the unit tests once. If they fail on a clean checkout, finish with
+      `blocked` set to "baseline tests fail" instead of changing code.
+  - name: padakan
+    contents: |
+      This repository is worked by Padakan. Follow the brief attached to the session, never ask
+      questions, work on branch padakan/<KEY>, open exactly one PR, record an end-to-end test video
+      after the PR, and finish with the structured output the session asks for.

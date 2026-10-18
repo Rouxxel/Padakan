@@ -8,7 +8,7 @@ timestamp: 2026-10-18T00:00:00Z
 
 # Implementation plan: Devin provider, cost gate, decision report
 
-**Audience:** the implementer. **Status:** to build. Background: [ARCHITECTURE.md](./ARCHITECTURE.md) §7 and §9, [PLUGIN-STRUCTURE.md](./PLUGIN-STRUCTURE.md) §3, §5 and §7, [DEVIN.md](../infrastructure/DEVIN.md).
+**Audience:** the implementer. **Status:** built and tested against a mocked Devin API (D.1–D.3 pass); the live checks in D.4 are still to run against a real Devin organization. Background: [ARCHITECTURE.md](./ARCHITECTURE.md) §7 and §9, [PLUGIN-STRUCTURE.md](./PLUGIN-STRUCTURE.md) §3, §5 and §7, [DEVIN.md](../infrastructure/DEVIN.md).
 
 This plan covers three parts and nothing else:
 

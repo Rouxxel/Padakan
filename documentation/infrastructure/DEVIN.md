@@ -113,6 +113,7 @@ The sections above are kept as first written. A later check against the v3 API r
 | 10 | Permissions | Service-user token `cog_…` | Creating sessions needs the **`UseDevinSessions`** (`org.devins.use`) permission at org level; `create_as_user_id` also needs `ImpersonateOrgSessions` | Onboarding doctor checks the permission |
 | 11 | Base URL and auth check | Not stated | Base URL `https://api.devin.ai/v3`; `GET /v3/self` returns the principal (`service_user_id`, `org_id`) | Doctor's first check |
 | 12 | Errors | Not stated | Errors are `ProblemDetail` JSON (`title`, `status`, `detail`); responses include `401`, `403`, `404`, `409`, `422` and `429` | The client parses `ProblemDetail` and retries only `429` and `5xx` |
+| 13 | Blueprint `post-build` | Lists `post-build` (health checks that fail the build) among the blueprint sections; the implementation plan (A.10) puts a smoke check there in the repo blueprint | `post-build` is **organization and enterprise level only**. A repository-level blueprint has `initialize`, `maintenance`, `knowledge`, `runs-on`, `shell` and `clone` | `sandboxes/devin/blueprint.yaml` puts the smoke check in `knowledge` (an instruction to run the tests first and report `blocked` if a clean checkout fails); the repo's CI stays the real gate |
 
 Still unconfirmed, waiting on the implementer's first live session:
 - Query parameters for `GET …/sessions` (for example a page limit or tag filter). The doctor check that lists sessions depends on them.

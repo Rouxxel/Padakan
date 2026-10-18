@@ -5,7 +5,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { checkProvider } from '../sandboxes/contract.mjs';
 
 const run = promisify(execFile);
@@ -42,7 +42,7 @@ export async function doctor(ctx, { probe = defaultProbe } = {}) {
   if (!existsSync(providerFile)) add('provider', 'fail', `${s.PADAKAN_SANDBOX_PROVIDER}: not built yet (${providerFile})`);
   else {
     try {
-      const problems = checkProvider(await import(providerFile), s.PADAKAN_SANDBOX_PROVIDER);
+      const problems = checkProvider(await import(pathToFileURL(providerFile).href), s.PADAKAN_SANDBOX_PROVIDER);
       add('provider', problems.length ? 'fail' : 'ok', problems.length ? problems.join('; ') : s.PADAKAN_SANDBOX_PROVIDER);
     } catch (e) {
       add('provider', 'fail', `${s.PADAKAN_SANDBOX_PROVIDER}: ${e.message}`);
@@ -50,7 +50,7 @@ export async function doctor(ctx, { probe = defaultProbe } = {}) {
     const providerDoctor = join(PLUGIN, 'sandboxes', s.PADAKAN_SANDBOX_PROVIDER, 'doctor.mjs');
     if (existsSync(providerDoctor)) {
       try {
-        const mod = await import(providerDoctor);
+        const mod = await import(pathToFileURL(providerDoctor).href);
         for (const r of (await mod.doctor(ctx)) || []) add(`${s.PADAKAN_SANDBOX_PROVIDER}.${r.name}`, r.ok ? 'ok' : r.level || 'fail', r.detail || '');
       } catch (e) {
         add(`${s.PADAKAN_SANDBOX_PROVIDER}.doctor`, 'fail', e.message);
