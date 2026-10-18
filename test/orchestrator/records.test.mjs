@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, writeFile, mkdir, stat } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { makeRepo, removeDir, git, tempDir } from '../helpers/index.mjs';
 import { mainRepoRoot, recordsDir, init, taskDir, appendLog, loadContext, LAYOUT, readState } from '../../orchestrator/lib/records.mjs';
 
@@ -47,7 +47,7 @@ test('a submodule resolves to its superproject', async () => {
 test('PADAKAN_RECORDS_DIR overrides the name and must be absolute', async () => {
   const { base, repo } = await makeRepo('shop');
   try {
-    assert.equal(recordsDir(repo, { dir: '/srv/padakan/shop' }), '/srv/padakan/shop');
+    assert.equal(recordsDir(repo, { dir: '/srv/padakan/shop' }), resolve('/srv/padakan/shop'), 'a native absolute path (C:\srv\... on Windows)');
     assert.throws(() => recordsDir(repo, { dir: 'relative/path' }), /must be an absolute path/);
     assert.throws(() => recordsDir(repo, { name: '../escape' }), /plain folder name/);
   } finally {

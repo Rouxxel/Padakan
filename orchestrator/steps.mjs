@@ -8,7 +8,7 @@
 
 import { cp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { join, relative, sep } from 'node:path';
 import { init as initRecords, taskDir } from './lib/records.mjs';
 import { readState, updateState, updateTask, getTask, treeId, branchFor, assertKey } from './lib/state.mjs';
 import { validateFile, validateBundle } from '../core/okf.mjs';
@@ -160,7 +160,7 @@ export async function verify(ctx, args) {
   if (head && task.base) {
     diff = await inspect({ repo: ctx.repo, base: task.base, head, settings: ctx.settings, allowDependencies: manifest.allowDependencies || [] });
   }
-  const okf = (await validateBundle(dir)).map((p) => `${relative(ctx.records, p.file)}: ${p.problem}`);
+  const okf = (await validateBundle(dir)).map((p) => `${relative(ctx.records, p.file).split(sep).join('/')}: ${p.problem}`);
   const input = {
     taskTests: await readJson(join(checks, 'tests.json')),
     acceptance: await readJson(join(checks, 'acceptance.json')),
@@ -188,7 +188,7 @@ export async function verify(ctx, args) {
   const status = v.verdict === 'ESCALATE' ? 'escalated' : 'verified';
   await updateTask(ctx.records, key, { status, verdict: v.verdict, verified_head: head }, ctx.now);
   await ctx.audit.append({ type: 'gates.verdict', task: key, head, verdict: v.verdict, reasons: v.reasons.length, summary: `verdict ${v.verdict}` });
-  return { line: `${resultLine(v)} CHECKS=${relative(ctx.records, join(checks, 'verify.md'))}`, code: v.verdict === 'ESCALATE' ? 1 : 0 };
+  return { line: `${resultLine(v)} CHECKS=${relative(ctx.records, join(checks, 'verify.md')).split(sep).join('/')}`, code: v.verdict === 'ESCALATE' ? 1 : 0 };
 }
 
 // ── evidence <KEY>: pull what the tree recorded ─────────────────────────────────────────────────

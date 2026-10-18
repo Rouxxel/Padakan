@@ -15,7 +15,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { readdir, stat, readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { join, relative, extname } from 'node:path';
+import { join, relative, extname, sep } from 'node:path';
 
 const run = promisify(execFile);
 const VIDEO_EXT = new Set(['.mp4', '.webm', '.mov']);
@@ -51,13 +51,13 @@ export async function buildPack({ records, key, repo, base, head }) {
   const evidenceDir = join(dir, 'evidence');
   const videos = [];
   for (const f of await walk(evidenceDir)) {
-    if (VIDEO_EXT.has(extname(f).toLowerCase())) videos.push({ path: relative(dir, f), bytes: (await stat(f)).size });
+    if (VIDEO_EXT.has(extname(f).toLowerCase())) videos.push({ path: relative(dir, f).split(sep).join('/'), bytes: (await stat(f)).size });
   }
   videos.sort((a, b) => b.bytes - a.bytes || a.path.localeCompare(b.path));
   const video = videos.find((v) => v.bytes > 0) || null;
 
   const archFile = join(evidenceDir, 'architecture.md');
-  const architecture = existsSync(archFile) ? { path: relative(dir, archFile) } : null;
+  const architecture = existsSync(archFile) ? { path: relative(dir, archFile).split(sep).join('/') } : null;
 
   let files = null;
   if (repo && base && head) {

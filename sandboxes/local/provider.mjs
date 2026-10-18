@@ -8,7 +8,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { mkdir, cp, readdir, readFile, appendFile, stat } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { join, basename, resolve, relative, isAbsolute } from 'node:path';
+import { join, basename, resolve, relative, isAbsolute, sep } from 'node:path';
 import { SandboxError, SECRET_FILE_RE } from '../contract.mjs';
 
 const run = promisify(execFile);
@@ -19,6 +19,8 @@ export const name = 'local';
 export const capabilities = ['create', 'exec', 'push', 'pull', 'brief', 'attach', 'url', 'status', 'evidence', 'retire', 'destroy'];
 
 const PADAKAN_DIR = '.padakan';
+// POSIX sh: /bin/sh, or on Windows the `sh` that ships with Git for Windows (on PATH with git).
+const SHELL = process.platform === 'win32' ? 'sh' : '/bin/sh';
 const treesRoot = (records) => `${records}-trees`;
 
 function inside(root, p) {
@@ -65,7 +67,7 @@ export async function create(ctx, id, { repo = ctx.repo, branch = `padakan/${id}
 // exec(ctx, handle, cmd) -> { code, stdout, stderr }. One shell string, run in the worktree.
 export async function exec(ctx, handle, cmd, { timeout = 10 * 60_000 } = {}) {
   try {
-    const { stdout, stderr } = await run('/bin/sh', ['-c', cmd], { cwd: handle.path, timeout, maxBuffer: 64 * 1024 * 1024 });
+    const { stdout, stderr } = await run(SHELL, ['-c', cmd], { cwd: handle.path, timeout, maxBuffer: 64 * 1024 * 1024 });
     return { code: 0, stdout, stderr };
   } catch (e) {
     return { code: typeof e.code === 'number' ? e.code : 1, stdout: e.stdout || '', stderr: e.stderr || String(e.message) };
@@ -127,7 +129,7 @@ export async function evidence(ctx, handle, key) {
   if (!existsSync(src)) return { video: null, files: [] };
   await mkdir(dst, { recursive: true });
   await cp(src, dst, { recursive: true });
-  const files = (await walk(dst)).map((f) => relative(ctx.records, f));
+  const files = (await walk(dst)).map((f) => relative(ctx.records, f).split(sep).join('/'));
   return { video: files.find((f) => /\.(mp4|webm|mov)$/i.test(f)) || null, files };
 }
 
@@ -161,7 +163,7 @@ export async function retire(ctx, handle, key) {
     const dst = join(ctx.records, 'tasks', key);
     await mkdir(dst, { recursive: true });
     await cp(src, join(dst, 'record.md'));
-    record = join('tasks', key, 'record.md');
+    record = `tasks/${key}/record.md`;
   }
   const d = await destroy(ctx, handle);
   return { record, ...d };

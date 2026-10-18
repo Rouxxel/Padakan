@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile, writeFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { spawn } from 'node:child_process';
+import { pathToFileURL } from 'node:url';
 import { ROOT, tempDir, removeDir, runNode } from '../helpers/index.mjs';
 import { openAudit, canonical, GENESIS } from '../../core/audit.mjs';
 import { init } from '../../orchestrator/lib/records.mjs';
@@ -36,7 +37,8 @@ test('entries chain from genesis, verify passes, and the key is private', async 
     const second = await audit.append({ type: 'tree.planted', task: 'PAD-12' });
     assert.equal(second.prev, first.hash);
     assert.deepEqual(await audit.verify(), { ok: true, count: 2 });
-    assert.equal((await stat(audit.files.keyFile)).mode & 0o777, 0o600);
+    // Windows has no Unix permission bits (ACLs instead); chmod 600 is checked where it means something.
+    if (process.platform !== 'win32') assert.equal((await stat(audit.files.keyFile)).mode & 0o777, 0o600);
     assert.match(await readFile(join(dir, 'log.md'), 'utf8'), /· plan approved\n/);
   });
 });
@@ -98,7 +100,7 @@ test('AC3: concurrent appends never interleave or fork the chain', async () => {
     const audit = openAudit(dir, { log: false });
     await Promise.all(Array.from({ length: 25 }, (_, i) => audit.append({ type: 'step', n: i })));
     // And from separate processes, which share only the files.
-    const script = `import { openAudit } from ${JSON.stringify(join(ROOT, 'core', 'audit.mjs'))};
+    const script = `import { openAudit } from ${JSON.stringify(pathToFileURL(join(ROOT, 'core', 'audit.mjs')).href)};
       const a = openAudit(${JSON.stringify(dir)}, { log: false });
       for (let i = 0; i < 10; i++) await a.append({ type: 'proc', pid: process.pid, i });`;
     await Promise.all(

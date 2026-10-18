@@ -65,8 +65,13 @@ export function openAudit(recordsDir, { now = () => new Date().toISOString(), lo
       }
     }
     await chmod(keyFile, 0o600);
-    key = Buffer.from((await readFile(keyFile, 'utf8')).trim(), 'hex');
-    return key;
+    // Another process may have created the file and not written it yet: wait for the full key.
+    for (let i = 0; i < 200; i++) {
+      const hex = (await readFile(keyFile, 'utf8')).trim();
+      if (hex.length === 64) return (key = Buffer.from(hex, 'hex'));
+      await sleep(5);
+    }
+    throw new Error(`audit key ${keyFile} is incomplete`);
   }
 
   async function lock(timeoutMs = 10_000) {
@@ -76,7 +81,8 @@ export function openAudit(recordsDir, { now = () => new Date().toISOString(), lo
         await mkdir(lockDir);
         return;
       } catch (e) {
-        if (e.code !== 'EEXIST') throw e;
+        // Windows answers EPERM (or EACCES/EBUSY) while another process is removing the lock dir.
+        if (!['EEXIST', 'EPERM', 'EACCES', 'EBUSY'].includes(e.code)) throw e;
         if (Date.now() - start > timeoutMs) throw new Error(`audit lock held for over ${timeoutMs} ms: ${lockDir}`);
         await sleep(5 + Math.random() * 10);
       }

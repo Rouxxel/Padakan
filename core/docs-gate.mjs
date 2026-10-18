@@ -14,7 +14,7 @@
 
 import { readdir, readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { join, relative, basename } from 'node:path';
+import { join, relative, basename, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { validateFile } from './okf.mjs';
 
@@ -84,7 +84,7 @@ export async function checkFeature(dir, { root = dir } = {}) {
 export async function docsGate(root) {
   const results = [];
   for (const dir of await featureDirs(root)) {
-    for (const problem of await checkFeature(dir, { root })) results.push({ feature: relative(root, dir), problem });
+    for (const problem of await checkFeature(dir, { root })) results.push({ feature: relative(root, dir).split(sep).join('/'), problem });
   }
   return { features: (await featureDirs(root)).length, results };
 }
