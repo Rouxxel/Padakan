@@ -1,0 +1,26 @@
+#!/usr/bin/env node
+// padakan <step> [args]: run one orchestrator lifecycle step and print its result line last.
+// Steps: init, doctor, plant, attach, brief, poll, verify, evidence, merge, retire, recycle, status, ls
+
+import { buildContext } from '../orchestrator/lib/context.mjs';
+import { STEPS } from '../orchestrator/steps.mjs';
+import { doctor } from '../orchestrator/doctor.mjs';
+
+const ALL = { ...STEPS, doctor };
+const [step, ...args] = process.argv.slice(2);
+
+if (!step || step === '--help' || step === 'help' || !ALL[step]) {
+  console.error(`usage: padakan <step> [args]\nsteps: ${Object.keys(ALL).sort().join(', ')}`);
+  process.exit(step && step !== '--help' && step !== 'help' ? 2 : 0);
+}
+
+try {
+  const ctx = buildContext({ cwd: process.cwd() });
+  const result = await ALL[step](ctx, args);
+  for (const line of result.details || []) console.log(line);
+  console.log(result.line);
+  process.exit(result.code ?? 0);
+} catch (e) {
+  console.log(`ERROR=${JSON.stringify(e.message)} STEP=${step}`);
+  process.exit(1);
+}
