@@ -1,0 +1,38 @@
+{
+  "$comment": "A task's capability manifest: <records>/tasks/<KEY>/manifest.json, written by the capability resolver.",
+  "type": "object",
+  "required": ["task", "target", "platform", "verify_kit", "skills", "allowDependencies", "estimates", "resolved_by"],
+  "properties": {
+    "task": { "type": "string" },
+    "target": { "type": "string", "enum": ["web", "ios", "android", "backend"] },
+    "platform": { "type": "string" },
+    "verify_kit": {
+      "type": "object",
+      "required": ["mcp", "cli"],
+      "properties": {
+        "mcp": { "type": "array", "items": { "type": "string" } },
+        "cli": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "skills": { "type": "array", "items": { "type": "string" } },
+    "allowDependencies": { "type": "array", "items": { "type": "string" } },
+    "estimates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["step", "unit", "low", "likely", "high", "required"],
+        "properties": {
+          "step": { "type": "string" },
+          "unit": { "type": "string", "pattern": "^[a-z0-9:._/-]+$" },
+          "low": { "type": "number", "minimum": 0 },
+          "likely": { "type": "number", "minimum": 0 },
+          "high": { "type": "number", "minimum": 0 },
+          "required": { "type": "boolean" }
+        }
+      }
+    },
+    "rationale": { "type": "string" },
+    "resolved_by": { "type": "string" },
+    "resolved_at": { "type": "string" }
+  }
+}

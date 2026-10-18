@@ -14,6 +14,7 @@ import { readState, updateState, updateTask, getTask, treeId, branchFor, assertK
 import { validateFile, validateBundle } from '../core/okf.mjs';
 import { inspect } from '../core/diffcheck.mjs';
 import { verdict, resultLine } from '../core/gates.mjs';
+import { resolve as resolveManifest, resultLine as manifestLine } from '../core/resolver.mjs';
 
 const ok = (line, details) => ({ line, code: 0, details });
 const fail = (line, details) => ({ line, code: 1, details });
@@ -52,6 +53,20 @@ export async function init(ctx) {
   const r = await initRecords(ctx.records, { repo: ctx.repo ? ctx.repo.split('/').pop() : undefined });
   await ctx.audit.append({ type: 'records.init', summary: `records initialised (${r.created.length} files created)` });
   return ok(`RECORDS=${ctx.records} CREATED=${r.created.length}`);
+}
+
+// ── resolve <KEY>: the capability resolver chooses the task's tools; the human is not asked ──────
+export async function resolve(ctx, args) {
+  const key = assertKey(args[0]);
+  const task = await getTask(ctx.records, key);
+  const prdFile = join(ctx.records, 'plan', 'prd.md');
+  const prd = existsSync(prdFile) ? await readFile(prdFile, 'utf8') : '';
+  const { manifest, usage } = await resolveManifest({ task: { key, ...task }, prd, settings: ctx.settings, client: ctx.models(), now: ctx.now });
+  const dir = await taskDir(ctx.records, key);
+  await writeFile(join(dir, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
+  await updateTask(ctx.records, key, { target: manifest.target, platform: manifest.platform }, ctx.now);
+  await ctx.audit.append({ type: 'manifest.resolved', task: key, target: manifest.target, model: manifest.resolved_by, usage, summary: `manifest resolved (${manifest.target} on ${manifest.platform})` });
+  return ok(manifestLine(`tasks/${key}/manifest.json`, manifest));
 }
 
 // ── plant <KEY> [--provider p] [--base ref] ─────────────────────────────────────────────────────
@@ -254,4 +269,4 @@ export async function ls(ctx) {
   return ok(`TREES=${handles.length}`, handles.map((h) => `${h.id}\t${h.provider}\t${h.state}\t${h.task || '-'}\t${h.url || h.path || '-'}`));
 }
 
-export const STEPS = { init, gate, pause, plant, attach, brief, poll, verify, evidence, merge, retire, recycle, status, ls };
+export const STEPS = { init, gate, pause, resolve, plant, attach, brief, poll, verify, evidence, merge, retire, recycle, status, ls };

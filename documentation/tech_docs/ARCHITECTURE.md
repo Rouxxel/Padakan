@@ -75,7 +75,7 @@ After this gate, the human is asked again only by the cost gate (section 9).
 
 ## 5. Capability registry and resolver
 
-The **registry** (`registry/capabilities.yml` in the plugin) lists everything an agent can be given. The **capability resolver** is a decision model with schema-validated output: for each task it reads the PRD's tech stack and the task and returns a manifest. A tree starts with only what its manifest names, so its agent can validate its own work.
+The **registry** (`registry/capabilities.json` in the plugin) lists everything an agent can be given. The **capability resolver** is a decision model with schema-validated output: for each task it reads the PRD's tech stack and the task and returns a manifest. A tree starts with only what its manifest names, so its agent can validate its own work.
 
 **The resolver decides; the human does not.** Choosing tools is a model's job: the manifests are produced automatically after the plan is approved and are shown to the human only for information. The resolver runs on Nemotron through Nebius by default; any OpenAI-compatible endpoint works, including a local model server (issue #16). Its output is schema-validated, and an invalid manifest is a failed check, not a question.
 
