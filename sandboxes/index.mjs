@@ -49,7 +49,16 @@ export function openGateway(ctx, { providers = {}, now = () => new Date().toISOS
     const path = handlePath(handle.id);
     const tmp = `${path}.${process.pid}.tmp`;
     await writeFile(tmp, `${JSON.stringify(handle, null, 2)}\n`);
-    await rename(tmp, path);
+    // Windows refuses to replace a file another handle has open (EPERM/EACCES/EBUSY): retry briefly.
+    for (let i = 0; ; i++) {
+      try {
+        await rename(tmp, path);
+        break;
+      } catch (e) {
+        if (i >= 20 || !['EPERM', 'EACCES', 'EBUSY'].includes(e.code)) throw e;
+        await new Promise((r) => setTimeout(r, 10 * (i + 1)));
+      }
+    }
     return handle;
   }
 

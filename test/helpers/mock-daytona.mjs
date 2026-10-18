@@ -26,9 +26,18 @@ exit 0
 `,
 };
 
-function sh(home, cmd, timeoutMs) {
+let scriptSeq = 0;
+async function sh(home, cmd, timeoutMs) {
+  // On Windows the command line mangles long, quoted commands (32k limit, quoting rules), so the
+  // command goes through a script file run by Git for Windows' sh. Elsewhere: sh -c, as before.
+  let args = ['-c', cmd];
+  if (process.platform === 'win32') {
+    const file = join(home, `.mock-cmd-${process.pid}-${++scriptSeq}.sh`);
+    await writeFile(file, cmd);
+    args = [file];
+  }
   return new Promise((resolve) => {
-    execFile('/bin/sh', ['-c', cmd], {
+    execFile(process.platform === 'win32' ? 'sh' : '/bin/sh', args, {
       cwd: home,
       timeout: timeoutMs,
       maxBuffer: 256 * 1024 * 1024,

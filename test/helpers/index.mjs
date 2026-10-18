@@ -13,7 +13,8 @@ export async function tempDir(prefix = 'padakan-') {
 }
 
 export async function removeDir(dir) {
-  await rm(dir, { recursive: true, force: true });
+  // Windows keeps files busy for a moment after a child process (git, sh) exits: retry.
+  await rm(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
 }
 
 export function git(cwd, ...args) {

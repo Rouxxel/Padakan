@@ -18,7 +18,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { readFile, writeFile, mkdir, readdir, rm, stat, mkdtemp } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
-import { join, dirname, basename, relative, isAbsolute, normalize } from 'node:path';
+import { join, dirname, basename, relative, sep, posix } from 'node:path';
 import { tmpdir } from 'node:os';
 import { randomBytes } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
@@ -36,7 +36,11 @@ export const capabilities = [
 ];
 
 const PADAKAN_DIR = '.padakan';
-const CHUNK = 150_000; // base64 characters per exec, well under ARG_MAX
+// base64 characters per exec: well under ARG_MAX, and under the 32k command line of Windows hosts
+const CHUNK = process.platform === 'win32' ? 24_000 : 150_000;
+// tar on the orchestrator's machine. On Windows, Git's GNU tar reads "C:\..." as host:path, so use the
+// bsdtar Windows ships in System32 (Windows 10+), which understands drive paths.
+const LOCAL_TAR = process.platform === 'win32' ? join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'tar.exe') : 'tar';
 const CLAUDE_BLOCKS = ['CLAUDE-padakan.md', 'CLAUDE-evidence.md', 'CLAUDE-disk.md'];
 
 // ── the CLI ─────────────────────────────────────────────────────────────────────────────────────
@@ -272,8 +276,9 @@ export async function exec(ctx, handle, cmd, { timeout = 600 } = {}) {
 }
 
 function relInside(p) {
-  if (typeof p !== 'string' || !p || isAbsolute(p)) return null;
-  const n = normalize(p);
+  // Paths inside the sandbox are POSIX paths, whatever the host OS.
+  if (typeof p !== 'string' || !p || posix.isAbsolute(p) || /^[A-Za-z]:|\\/.test(p)) return null;
+  const n = posix.normalize(p);
   return n === '..' || n.startsWith(`..${'/'}`) ? null : n;
 }
 
@@ -329,7 +334,7 @@ export async function pull(ctx, handle, from, to) {
   try {
     await writeFile(join(tmp, 'a.tgz'), bytes);
     await mkdir(to, { recursive: true });
-    await run('tar', ['-xzf', join(tmp, 'a.tgz'), '-C', to]);
+    await run(LOCAL_TAR, ['-xzf', 'a.tgz', '-C', to], { cwd: tmp });
   } finally {
     await rm(tmp, { recursive: true, force: true });
   }
@@ -445,7 +450,7 @@ export async function evidence(ctx, handle, key) {
   if (has.code !== 0) return { video: null, files: [] };
   const dst = join(ctx.records, 'tasks', key, 'evidence', 'daytona');
   await pull(ctx, handle, `${PADAKAN_DIR}/evidence`, dst);
-  const files = (await walk(dst)).map((f) => relative(ctx.records, f));
+  const files = (await walk(dst)).map((f) => relative(ctx.records, f).split(sep).join('/'));
   return { video: files.find((f) => /\.(mp4|webm|mov)$/i.test(f)) || null, files };
 }
 

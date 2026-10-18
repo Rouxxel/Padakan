@@ -108,7 +108,8 @@ test('seed writes credentials into the sandbox only, and is idempotent', async (
     assert.match(env, new RegExp(`CLAUDE_CODE_OAUTH_TOKEN='${TOKEN}'`));
     assert.match(env, new RegExp(`CLAUDE_CODE_OAUTH_FALLBACK_TOKEN='${FALLBACK}'`));
     assert.match(env, /IS_SANDBOX=1/);
-    assert.equal((await stat(join(home, '.claude-env'))).mode & 0o777, 0o600);
+    // The mock sandbox is a local folder; real sandboxes are Linux. Windows hosts have no Unix modes.
+    if (process.platform !== 'win32') assert.equal((await stat(join(home, '.claude-env'))).mode & 0o777, 0o600);
     assert.match(await readFile(join(home, '.bashrc'), 'utf8'), /\.claude-env/);
     assert.equal(await readFile(join(home, 'gh-received'), 'utf8'), PAT);
     assert.equal(existsSync(join(home, '.padakan', 'gh.tok')), false, 'the token file is deleted');
