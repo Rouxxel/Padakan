@@ -17,6 +17,7 @@ import { verdict, resultLine } from '../core/gates.mjs';
 import { resolve as resolveManifest, resultLine as manifestLine } from '../core/resolver.mjs';
 import { collect } from '../core/collect-logs.mjs';
 import { triage } from '../core/triage.mjs';
+import { buildPack, renderMarkdown, renderHtml, ITEMS } from '../core/report.mjs';
 
 const ok = (line, details) => ({ line, code: 0, details });
 const fail = (line, details) => ({ line, code: 1, details });
@@ -180,10 +181,19 @@ export async function verify(ctx, args) {
 // ── evidence <KEY>: pull what the tree recorded ─────────────────────────────────────────────────
 export async function evidence(ctx, args) {
   const key = assertKey(args[0]);
-  const { handle } = await taskTree(ctx, key);
-  const r = await ctx.gateway.evidence(handle.id, key);
-  await ctx.audit.append({ type: 'evidence.pulled', task: key, video: r.video || null, summary: `evidence pulled (${(r.files || []).length} files)` });
-  return ok(`EVIDENCE=tasks/${key}/evidence VIDEO=${r.video || 'none'} FILES=${(r.files || []).length}`);
+  const task = await getTask(ctx.records, key);
+  const handle = task.tree ? await ctx.gateway.get(task.tree).catch(() => null) : null;
+  if (handle && (await ctx.gateway.supports(handle.id, 'evidence'))) await ctx.gateway.evidence(handle.id, key);
+  const head = task.head || (task.branch ? await ctx.github.remoteBranch(ctx.repo, task.branch) : null);
+  const pack = await buildPack({ records: ctx.records, key, repo: ctx.repo, base: task.base, head });
+  const dir = join(ctx.records, 'tasks', key, 'evidence');
+  await mkdir(dir, { recursive: true });
+  await writeFile(join(dir, 'pack.json'), `${JSON.stringify(pack, null, 2)}\n`);
+  await writeFile(join(dir, 'evidence-report.md'), renderMarkdown(pack, { title: task.title || key, verdict: task.verdict || null, now: ctx.now }));
+  await writeFile(join(dir, 'evidence-report.html'), renderHtml(pack, { title: task.title || key, verdict: task.verdict || null }));
+  const missing = ITEMS.filter((i) => pack.status[i] === 'missing');
+  await ctx.audit.append({ type: 'evidence.pack', task: key, head, present: pack.present, missing, summary: `evidence pack ${pack.present}/4` });
+  return { line: `PACK=tasks/${key}/evidence/evidence-report.md ITEMS=${pack.present}/4 MISSING=${missing.length ? missing.join(',') : 'none'}`, code: missing.length ? 1 : 0 };
 }
 
 // ── merge <KEY> [--approved-by name]: only a verified head, one at a time ───────────────────────
