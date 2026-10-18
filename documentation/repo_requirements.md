@@ -1,0 +1,5 @@
+- Open source repository
+- Public GitHub repository with the full source code
+- Comprehensive README with setup & installation steps
+- Documentation of all APIs, frameworks & tools used
+- Enough technical docs for thorough jury evaluation
