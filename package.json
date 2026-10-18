@@ -1,0 +1,10 @@
+{
+  "name": "padakan",
+  "private": true,
+  "description": "Claude Code plugin for autonomous development you can trust",
+  "license": "Apache-2.0",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "test": "node --test"
+  }
+}
