@@ -62,9 +62,6 @@ test('client covers every endpoint in the plan', async () => {
 
 test('P2 retries 429 and 503, honours Retry-After, gives up after 4 retries', async () => {
   reset();
-  const path = `/v3/organizations/${mock.orgId}/sessions/devin-x`;
-  mock.failNext('GET', path, 429, { headers: { 'Retry-After': '3' } });
-  mock.failNext('GET', path, 503);
   const s = await client().createSession({ prompt: 'p' });
   mock.failNext('GET', `/v3/organizations/${mock.orgId}/sessions/${s.session_id}`, 429, { headers: { 'Retry-After': '3' } });
   mock.failNext('GET', `/v3/organizations/${mock.orgId}/sessions/${s.session_id}`, 503);
