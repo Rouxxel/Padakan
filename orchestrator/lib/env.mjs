@@ -23,8 +23,8 @@ export const SETTINGS = [
   S('PADAKAN_LANGUAGE', 'General', 'en', 'string', 'Language of briefs, reports and specs.'),
   S('PADAKAN_RECORDS_NAME', 'General', '{repo}-padakan', 'string', 'Name of the records folder next to the repo; {repo} is replaced by the repo folder name.'),
   S('PADAKAN_RECORDS_DIR', 'General', '', 'path', 'Absolute path of the records folder; overrides PADAKAN_RECORDS_NAME.'),
-  S('PADAKAN_TRACKER', 'General', 'linear', 'enum', 'Where tasks are filed.', { values: ['linear', 'github', 'none'] }),
-  S('LINEAR_API_KEY', 'General', '', 'string', 'Linear API key. Orchestrator only; trees never get it.', { secret: true }),
+  S('PADAKAN_TRACKER', 'General', 'github', 'enum', 'Where tasks are filed: github (GitHub Issues on the origin repository, through gh), linear, or none (state.json only).', { values: ['linear', 'github', 'none'] }),
+  S('LINEAR_API_KEY', 'General', '', 'string', 'Linear API key, when PADAKAN_TRACKER=linear. Orchestrator only; trees never get it.', { secret: true }),
 
   // Terminal and driver
   S('PADAKAN_TERMINAL', 'Terminal and driver', 'herdr', 'enum', 'Terminal for the orchestrator and for non-Devin trees.', { values: ['herdr', 'none'] }),
