@@ -5,6 +5,7 @@ description: <One sentence: what changed and the verdict.>
 task: <TASK-KEY>
 area: <area>
 slug: <slug>
+tags: [<area>, evidence]
 verdict: PASS | KNOWN | FAIL | BROKEN | STOPPED | NOT RUN
 confidence: <auto-ship | human-merge | escalated>
 timestamp: <YYYY-MM-DDTHH:MM:SSZ>
