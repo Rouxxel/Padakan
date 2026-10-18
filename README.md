@@ -40,9 +40,17 @@ Padakan solves it with the system around the agent. The agent is a black box tha
 | **Self-healing** | A monitor loop reads production logs, triages them with Nemotron on Nebius, and turns fixable defects into new tasks. |
 | **Everything on the record** | A hash-chained audit trail and an Open Knowledge Format bundle of every brief, report and decision, kept next to the repo. |
 
+## Install
+
+In Claude Code (2.1.275 or later):
+
+```
+/plugin install padakan --marketplace Rouxxel/Padakan
+```
+
 ## Status
 
-Design phase. The architecture and the plugin layout are defined; implementation has not started. Setup and installation steps will be added here as the plugin is built.
+In development. The build is tracked as GitHub issues, one per module; the plugin is not usable end to end yet. Setup steps will be added here as modules land.
 
 ## Documentation
 
