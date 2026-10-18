@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Evidence report: sample</title>
+<!--
+  SAMPLE of how a generated evidence report looks. Every value below is made up.
+  One self-contained page: no external CSS, fonts or scripts, so it renders from a preview URL,
+  object storage, or a laptop with no network. Colors are the brand.md tokens; swap them there.
+  Sections and anchors match templates/evidence-report.md: #verdict, #pack, #video, #architecture,
+  #files, #tests (one row anchor per criterion, #AC1 ...), #findings, #cost, #audit.
+-->
+<style>
+  :root {
+    --brand:#2563eb; --bg:#f8fafc; --surface:#ffffff; --text:#0f172a; --muted:#475569; --line:#e2e8f0;
+    --pass:#16a34a; --known:#0284c7; --fail:#dc2626; --warn:#d97706; --none:#64748b;
+    --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0b1220; --surface:#121a2b; --text:#e5e7eb; --muted:#94a3b8; --line:#243049; --brand:#60a5fa; }
+  }
+  * { box-sizing: border-box; }
+  a { color: var(--brand); }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.55 -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 28px 20px 64px; }
+  header .crumbs { color:var(--muted); font-size:13px; }
+  h1 { font-size: 26px; margin: 6px 0 4px; }
+  h2 { font-size: 18px; margin: 36px 0 12px; padding-top: 8px; }
+  h3 { font-size: 15px; margin: 22px 0 8px; }
+  .meta { display:flex; flex-wrap:wrap; gap:6px 18px; color:var(--muted); font-size:13px; }
+  .meta b { color:var(--text); font-weight:600; }
+  nav { display:flex; flex-wrap:wrap; gap:8px; margin: 18px 0 0; }
+  nav a { font-size:12.5px; color:var(--brand); text-decoration:none; border:1px solid var(--line); background:var(--surface); padding:3px 10px; border-radius:999px; }
+  .banner { margin-top:22px; border:1px solid var(--line); border-left:6px solid var(--pass); background:var(--surface); border-radius:10px; padding:16px 18px; }
+  .banner .big { font-size:22px; font-weight:800; color:var(--pass); letter-spacing:.3px; }
+  .banner .sub { font-weight:700; margin-left:10px; }
+  .banner p { margin:8px 0 0; }
+  .card { background:var(--surface); border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th, td { text-align:left; padding:9px 12px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { font-size:12px; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); background:color-mix(in srgb, var(--line) 35%, transparent); }
+  tr:last-child td { border-bottom:0; }
+  code, .mono { font-family:var(--mono); font-size:12.5px; }
+  .pill { display:inline-block; font-size:11px; font-weight:800; letter-spacing:.4px; color:#fff; padding:2px 9px; border-radius:999px; white-space:nowrap; }
+  .PASS { background:var(--pass); } .KNOWN { background:var(--known); } .FAIL { background:var(--fail); }
+  .BROKEN { background:#7f1d1d; } .STOPPED { background:var(--warn); } .NOTRUN, .NOTEX { background:var(--none); }
+  .ok { color:var(--pass); font-weight:700; } .no { color:var(--fail); font-weight:700; }
+  .video { aspect-ratio:16/9; display:grid; place-items:center; text-align:center; color:#cbd5e1; background:linear-gradient(135deg,#0f172a,#1e293b); border-radius:10px; position:relative; }
+  .video .play { width:64px; height:64px; border-radius:50%; background:rgba(255,255,255,.15); display:grid; place-items:center; margin:0 auto 10px; font-size:26px; color:#fff; }
+  .video small { display:block; opacity:.75; }
+  .moments { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  .moments span { font-size:12.5px; border:1px solid var(--line); background:var(--surface); padding:3px 10px; border-radius:999px; }
+  .moments b { font-family:var(--mono); color:var(--brand); }
+  .arch { padding:14px; } .arch svg { width:100%; height:auto; display:block; }
+  .two { display:grid; grid-template-columns: 1fr 1fr; gap:14px; margin-top:12px; }
+  @media (max-width:720px){ .two { grid-template-columns:1fr; } }
+  .note { color:var(--muted); font-size:13px; margin:8px 0 0; }
+  .diff-add { color:var(--pass); font-family:var(--mono); } .diff-del { color:var(--fail); font-family:var(--mono); }
+  blockquote { margin:6px 0 0; padding:8px 12px; border-left:3px solid var(--line); color:var(--muted); font-family:var(--mono); font-size:12.5px; background:color-mix(in srgb, var(--line) 25%, transparent); }
+  details summary { cursor:pointer; color:var(--brand); }
+  footer { margin-top:40px; color:var(--muted); font-size:12.5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="crumbs">dashboard / export &middot; evidence report</div>
+  <h1>PAD-12 &middot; Export the dashboard as CSV</h1>
+  <div class="meta">
+    <span>Build <b class="mono">4e81b0a</b></span>
+    <span>Target <b>PR preview</b></span>
+    <span>Date <b>2026-10-18 14:22 UTC</b></span>
+    <span>Tree <b class="mono">tree-12-dashboard-csv</b></span>
+    <span>Agent <b>builder (Claude Code in Daytona)</b></span>
+  </div>
+  <nav>
+    <a href="#verdict">Verdict</a><a href="#pack">Evidence pack</a><a href="#video">Video</a>
+    <a href="#architecture">Architecture</a><a href="#files">Files</a><a href="#tests">Tests and CI</a>
+    <a href="#findings">Findings</a><a href="#cost">Cost</a><a href="#audit">Audit</a>
+  </nav>
+</header>
+
+<section id="verdict">
+  <div class="banner">
+    <span class="big">PASS</span><span class="sub">auto-ship</span>
+    <p>The dashboard now has an Export button that downloads the visible table as CSV, with the active filters applied.
+    The task's tests pass, every acceptance criterion was proven live on the preview, the full suite stayed green, and the
+    diff stays within its limits. <b>No known risk remains.</b></p>
+  </div>
+  <h2>Gates</h2>
+  <div class="card"><table>
+    <tr><th>Gate</th><th>Result</th><th>Source</th></tr>
+    <tr><td>Task tests pass in the suite</td><td class="ok">yes, 6 of 6</td><td class="mono">run r-0412</td></tr>
+    <tr><td>Acceptance criteria proven live</td><td class="ok">4 of 4</td><td class="mono">probe run p-0413</td></tr>
+    <tr><td>Full regression suite</td><td class="ok">212 passed, 0 failed</td><td><a href="#">CI run #881</a></td></tr>
+    <tr><td>Diff inspection</td><td class="ok">pass: 3 files, +58 -2, no protected paths, no secrets, no dependency changes</td><td class="mono">rules v3</td></tr>
+    <tr><td>Critical-flow e2e suite</td><td><span class="pill PASS">PASS</span></td><td><a href="#tests">criteria below</a></td></tr>
+    <tr><td>Documents (OKF)</td><td class="ok">valid, 5 of 5</td><td class="mono">okf check</td></tr>
+    <tr><td>Cost</td><td>$1.12 of $5.00 budget</td><td><a href="#cost">ledger</a></td></tr>
+  </table></div>
+</section>
+
+<section id="pack">
+  <h2>Evidence pack</h2>
+  <div class="card"><table>
+    <tr><th>#</th><th>Item</th><th>Status</th><th>Verified by the orchestrator</th></tr>
+    <tr><td>1</td><td><a href="#video">Video of the change working</a></td><td class="ok">present</td><td>opened; follows the acceptance criteria step by step</td></tr>
+    <tr><td>2</td><td><a href="#architecture">Architecture of the change</a></td><td class="ok">present</td><td>compared with the real diff and call graph; matches</td></tr>
+    <tr><td>3</td><td><a href="#files">Files touched or edited</a></td><td class="ok">present</td><td>recomputed from git</td></tr>
+    <tr><td>4</td><td><a href="#tests">Tests and CI</a></td><td class="ok">present</td><td>re-read from CI, not from the agent's report</td></tr>
+  </table></div>
+</section>
+
+<section id="video">
+  <h2>Video</h2>
+  <div class="video"><div><div class="play">&#9654;</div>video/run.mp4 plays here<small>00:41 &middot; merged and seekable</small></div></div>
+  <div class="moments">
+    <span><b>00:05</b> dashboard loads with sample data</span>
+    <span><b>00:12</b> a date filter is applied</span>
+    <span><b>00:24</b> Export is clicked</span>
+    <span><b>00:33</b> the CSV opens with the filtered rows</span>
+  </div>
+  <p class="note">Also kept: <code>trace.zip</code> and 8 numbered screenshots next to the video.</p>
+</section>
+
+<section id="architecture">
+  <h2>Architecture of the change</h2>
+  <div class="card arch">
+    <svg viewBox="0 0 880 150" role="img" aria-label="CSV export flow">
+      <defs><marker id="m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#64748b"/></marker></defs>
+      <g font-family="-apple-system, Segoe UI, Arial" font-size="13">
+        <rect x="10" y="50" width="130" height="50" rx="8" fill="#eff6ff" stroke="#2563eb" stroke-width="2"/><text x="75" y="80" text-anchor="middle" fill="#0f172a">Dashboard</text>
+        <rect x="190" y="50" width="130" height="50" rx="8" fill="#ecfdf5" stroke="#059669" stroke-width="2.5"/><text x="255" y="72" text-anchor="middle" fill="#0f172a">Export button</text><text x="255" y="90" text-anchor="middle" fill="#047857" font-size="11">new</text>
+        <rect x="370" y="50" width="130" height="50" rx="8" fill="#eff6ff" stroke="#2563eb" stroke-width="2"/><text x="435" y="80" text-anchor="middle" fill="#0f172a">Filter state</text>
+        <rect x="550" y="50" width="130" height="50" rx="8" fill="#ecfdf5" stroke="#059669" stroke-width="2.5"/><text x="615" y="72" text-anchor="middle" fill="#0f172a">CSV writer</text><text x="615" y="90" text-anchor="middle" fill="#047857" font-size="11">new</text>
+        <rect x="730" y="50" width="130" height="50" rx="8" fill="#eff6ff" stroke="#2563eb" stroke-width="2"/><text x="795" y="80" text-anchor="middle" fill="#0f172a">Download</text>
+        <path d="M140 75H188M320 75H368M500 75H548M680 75H728" stroke="#64748b" stroke-width="2" marker-end="url(#m)"/>
+      </g>
+    </svg>
+    <div class="two">
+      <div><h3>What the task asked for</h3><p>Users want to take the dashboard's table into a spreadsheet, with the same filters they are looking at.</p></div>
+      <div><h3>What changed and why</h3><p>A new Export button reads the current filter state and passes the visible rows to a small CSV writer, so the file always matches the screen.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="files">
+  <h2>Files touched or edited</h2>
+  <div class="card"><table>
+    <tr><th>File</th><th>Change</th><th>+</th><th>-</th></tr>
+    <tr><td class="mono">src/dashboard/ExportButton.tsx</td><td>added</td><td class="diff-add">+31</td><td class="diff-del">-0</td></tr>
+    <tr><td class="mono">src/dashboard/csv.ts</td><td>added</td><td class="diff-add">+19</td><td class="diff-del">-0</td></tr>
+    <tr><td class="mono">src/dashboard/Dashboard.tsx</td><td>modified</td><td class="diff-add">+8</td><td class="diff-del">-2</td></tr>
+  </table></div>
+  <p class="note">Generated from git, not written by the agent. Protected paths touched: none. Dependencies changed: none. Secrets added: none.</p>
+</section>
+
+<section id="tests">
+  <h2>Tests and CI</h2>
+  <div class="card"><table>
+    <tr><th>Criterion</th><th>Story</th><th>Verdict</th><th>Evidence</th></tr>
+    <tr id="AC1"><td>AC1: the Export button is visible on the dashboard</td><td>US1</td><td><span class="pill PASS">PASS</span></td><td>button found by role and name</td></tr>
+    <tr id="AC2"><td>AC2: the file contains exactly the visible rows</td><td>US1</td><td><span class="pill PASS">PASS</span></td><td><blockquote>rows on screen: 42 &middot; rows in file: 42</blockquote></td></tr>
+    <tr id="AC3"><td>AC3: active filters are applied to the file</td><td>US2</td><td><span class="pill PASS">PASS</span></td><td>date filter 2026-10-01..10-15 present in every row</td></tr>
+    <tr id="AC4"><td>AC4: an empty table exports a header-only file</td><td>US2</td><td><span class="pill PASS">PASS</span></td><td><blockquote>1 line: date,region,revenue</blockquote></td></tr>
+    <tr id="AC5"><td>AC5: export from a shared, read-only view</td><td>US3</td><td><span class="pill NOTEX">NOT EXERCISED</span></td><td>no read-only fixture in this preview</td></tr>
+  </table></div>
+  <p class="note">Not exercised is never a pass. The criteria list comes from the playbook, not from what happened to run.
+  CI: <a href="#">run #881</a> &middot; passed &middot; 4 min 12 s &middot; shards 6/6.</p>
+</section>
+
+<section id="findings">
+  <h2>Findings</h2>
+  <div class="card"><table>
+    <tr><th>#</th><th>Severity</th><th>Title</th><th>Status</th></tr>
+    <tr><td>F1</td><td><span class="pill STOPPED">LOW</span></td><td>Column order follows the data source, not the on-screen order</td><td>opened as PAD-19</td></tr>
+  </table></div>
+</section>
+
+<section id="cost">
+  <h2>Cost and decisions</h2>
+  <div class="card"><table>
+    <tr><th>Step</th><th>Estimate</th><th>Spent</th><th>Note</th></tr>
+    <tr><td>Builder agent (model calls)</td><td>$0.80</td><td>$0.74</td><td>within budget</td></tr>
+    <tr><td>Sandbox compute</td><td>$0.15</td><td>$0.12</td><td>within budget</td></tr>
+    <tr><td>Browser run and video</td><td>$0.30</td><td>$0.26</td><td>within budget</td></tr>
+  </table></div>
+  <p class="note">Questions asked of the human: none. The cost gate was never triggered.</p>
+</section>
+
+<section id="audit">
+  <h2>Audit</h2>
+  <p>Signed entry <code>sha256:7f3a&hellip;c91e</code> &middot; chain <code>sha256:12b0&hellip;a4d7</code> &middot;
+  <code>padakan replay PAD-12</code></p>
+  <p class="note">Cleanup: none. The run left no probe data behind.</p>
+</section>
+
+<footer>Sample report. Template: <code>templates/evidence-report.md</code>. Colors come from <code>brand.md</code>.</footer>
+</div>
+</body>
+</html>

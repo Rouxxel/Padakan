@@ -1,0 +1,666 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Padakan Blueprint</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Layout: a walkthrough with a numbered chapter rail on wide screens and one reading column; diagrams, tables and trees scroll in their own boxes.
+   Colour code, one meaning each: orch = orchestrator and plugin wiring; core = deterministic trust checks; agent = agents and sandboxes (untrusted work);
+   human = where a human acts; record = records, evidence and OKF documents; ext = external services; safe = escalation and rollback. */
+:root{
+  --bg:#f3f4f6; --surface:#ffffff; --ink:#151a22; --muted:#596273; --line:#d6dae1; --code-bg:#e8ebf0;
+  --orch:#2f5aa8; --orch-soft:#e1e9f7;
+  --core:#1d6a57; --core-soft:#dceee7;
+  --agent:#9b2f7a; --agent-soft:#f5e2ef;
+  --human:#9a5b06; --human-soft:#f7e9d3;
+  --record:#6b45a8; --record-soft:#ece4f7;
+  --ext:#646d7a; --ext-soft:#eaecf0;
+  --safe:#b0352a; --safe-soft:#f8e0dc;
+  --f-display:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --f-body:"IBM Plex Sans","Segoe UI",Roboto,Arial,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1218; --surface:#171b23; --ink:#e4e8ef; --muted:#9aa3b2; --line:#2b313c; --code-bg:#1f2430;
+    --orch:#8fb0ea; --orch-soft:#1a2436; --core:#62c3a5; --core-soft:#16302a;
+    --agent:#e895cc; --agent-soft:#331a2c; --human:#e6a855; --human-soft:#34260f;
+    --record:#c0a3ec; --record-soft:#271f37; --ext:#a0a8b5; --ext-soft:#20252e;
+    --safe:#f0897c; --safe-soft:#361c19;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1218; --surface:#171b23; --ink:#e4e8ef; --muted:#9aa3b2; --line:#2b313c; --code-bg:#1f2430;
+  --orch:#8fb0ea; --orch-soft:#1a2436; --core:#62c3a5; --core-soft:#16302a;
+  --agent:#e895cc; --agent-soft:#331a2c; --human:#e6a855; --human-soft:#34260f;
+  --record:#c0a3ec; --record-soft:#271f37; --ext:#a0a8b5; --ext-soft:#20252e;
+  --safe:#f0897c; --safe-soft:#361c19;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.6}
+img{max-width:100%}
+a{color:var(--orch);text-underline-offset:2px}
+a:focus-visible,button:focus-visible{outline:2px solid var(--orch);outline-offset:2px}
+code{font-family:var(--f-mono);font-size:.86em;background:var(--code-bg);padding:.1em .35em;border-radius:4px;overflow-wrap:anywhere}
+pre{margin:0;font-family:var(--f-mono);font-size:.84rem;line-height:1.5;background:var(--code-bg);border-radius:10px;padding:14px 16px;overflow-x:auto}
+h1,h2,h3{font-family:var(--f-display);line-height:1.15;text-wrap:balance;margin:0}
+h2{font-size:clamp(1.5rem,3.4vw,1.9rem);font-weight:800;letter-spacing:-.01em}
+h3{font-size:1.08rem;font-weight:700}
+p{margin:0}
+ul,ol{margin:0;padding-left:1.25rem;display:grid;gap:.45rem}
+.wrap{max-width:1280px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 96px;display:grid;gap:40px}
+@media (min-width:1100px){.wrap{grid-template-columns:230px minmax(0,1fr);gap:52px}}
+.rail{display:none}
+@media (min-width:1100px){
+  .rail{display:grid;gap:14px;position:sticky;top:calc(env(safe-area-inset-top,0px) + 24px);align-self:start;font-size:.88rem}
+  .rail ol{list-style:none;padding:0;gap:1px}
+  .rail a{display:grid;grid-template-columns:2rem 1fr;align-items:baseline;padding:.32rem .6rem;border-radius:6px;color:var(--muted);text-decoration:none}
+  .rail a .n{font-family:var(--f-mono);font-size:.74rem}
+  .rail a:hover{background:var(--surface);color:var(--ink)}
+  .rail a.on{background:var(--surface);color:var(--ink);box-shadow:inset 2px 0 0 var(--orch)}
+  .rail .label,.rail .keys{font-family:var(--f-mono);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:0 .6rem}
+  .rail .keys{text-transform:none;letter-spacing:0;line-height:1.5}
+  .rail kbd{font-family:var(--f-mono);font-size:.7rem;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 .3rem;background:var(--surface);color:var(--ink)}
+}
+main{min-width:0;display:grid;gap:80px;max-width:1000px}
+.eyebrow{font-family:var(--f-mono);font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+header.top{display:grid;gap:20px}
+header.top h1{font-size:clamp(2.2rem,6vw,3.5rem);font-weight:800;letter-spacing:-.02em}
+.lede{font-size:1.14rem;max-width:66ch}
+.facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:0}
+.facts div{background:var(--surface);padding:12px 14px;display:grid;gap:2px;min-width:0}
+.facts dt{font-family:var(--f-mono);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.facts dd{margin:0;font-weight:500;overflow-wrap:anywhere}
+@media (max-width:640px){.facts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.legend{display:grid;gap:10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:14px 16px}
+.legend ul{list-style:none;padding:0;display:flex;flex-wrap:wrap;gap:8px 20px;font-size:.9rem}
+.legend li{display:flex;align-items:center;gap:8px}
+.sw{width:22px;height:14px;border-radius:4px;border:1.5px solid;flex:none}
+.sw.orch{background:var(--orch-soft);border-color:var(--orch)} .sw.core{background:var(--core-soft);border-color:var(--core)}
+.sw.agent{background:var(--agent-soft);border-color:var(--agent)} .sw.human{background:var(--human-soft);border-color:var(--human)}
+.sw.record{background:var(--record-soft);border-color:var(--record)} .sw.ext{background:var(--ext-soft);border-color:var(--ext)}
+.sw.safe{background:var(--safe-soft);border-color:var(--safe)}
+.jump{display:flex;flex-wrap:wrap;gap:8px}
+.jump a{font-size:.85rem;padding:.3rem .7rem;border:1px solid var(--line);border-radius:999px;text-decoration:none;color:var(--ink);background:var(--surface)}
+@media (min-width:1100px){.jump{display:none}}
+section.ch{display:grid;gap:22px;scroll-margin-top:24px}
+section.ch > header{display:grid;gap:8px}
+.chno{font-family:var(--f-mono);font-size:.78rem;letter-spacing:.08em;color:var(--orch);font-weight:600}
+.sub{color:var(--muted);max-width:68ch}
+.fig{margin:0;display:grid;gap:10px}
+.diagram{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:16px}
+.diagram svg{display:block;width:100%;height:auto;min-width:760px}
+.diagram.img img{display:block;min-width:900px;width:100%;height:auto;background:#fff;border-radius:6px}
+.fig figcaption{font-size:.88rem;color:var(--muted);max-width:80ch}
+.cols{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr))}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;gap:8px;align-content:start;min-width:0}
+.card p{font-size:.94rem}
+.card .tag{font-family:var(--f-mono);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.scroll{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:.93rem}
+th,td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid var(--line)}
+th{font-family:var(--f-mono);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:500;background:var(--bg)}
+tr:last-child td{border-bottom:0}
+td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+td code{white-space:nowrap}
+.pill{display:inline-block;font-family:var(--f-mono);font-size:.72rem;padding:.12rem .5rem;border-radius:999px;white-space:nowrap;font-weight:500}
+.pill.orch{background:var(--orch-soft);color:var(--orch)} .pill.core{background:var(--core-soft);color:var(--core)}
+.pill.agent{background:var(--agent-soft);color:var(--agent)} .pill.human{background:var(--human-soft);color:var(--human)}
+.pill.record{background:var(--record-soft);color:var(--record)} .pill.ext{background:var(--ext-soft);color:var(--ext)}
+.pill.safe{background:var(--safe-soft);color:var(--safe)}
+.note{border-left:3px solid var(--orch);background:var(--orch-soft);padding:12px 16px;border-radius:0 8px 8px 0;display:grid;gap:6px;max-width:80ch}
+.note.human{border-color:var(--human);background:var(--human-soft)}
+.note.record{border-color:var(--record);background:var(--record-soft)}
+.note .label{font-family:var(--f-mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.next{font-size:.9rem;color:var(--muted)}
+.ask{border:2px solid var(--orch);border-radius:12px;padding:16px 18px;display:grid;gap:12px;background:var(--surface)}
+.dec{display:grid;grid-template-columns:2.6rem minmax(0,1fr);gap:4px 12px;padding-top:12px;border-top:1px solid var(--line)}
+.dec:first-of-type{border-top:0;padding-top:0}
+.dec .k{font-family:var(--f-mono);font-weight:600;color:var(--orch);font-size:.86rem;padding-top:2px}
+.dec .b{display:grid;gap:4px;min-width:0}
+.dec .rec{font-size:.92rem;color:var(--muted)}
+.dec .rec strong{color:var(--core)}
+/* file trees */
+.hl{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.hl button{font:inherit;font-size:.84rem;padding:.3rem .75rem;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--ink);cursor:pointer}
+.hl button[aria-pressed="true"]{border-color:var(--orch);box-shadow:inset 0 0 0 1px var(--orch);background:var(--orch-soft)}
+.tree{border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:14px 16px;overflow-x:auto}
+.tree ul{list-style:none;margin:0;padding-left:20px;display:block;border-left:1px dashed var(--line)}
+.tree > ul{padding-left:0;border-left:0}
+.tree li{padding:4px 0}
+.tree li > ul{margin-top:4px}
+.row{display:grid;grid-template-columns:minmax(210px,260px) minmax(0,1fr);gap:2px 14px;align-items:baseline;transition:opacity .15s}
+@media (max-width:700px){.row{grid-template-columns:minmax(0,1fr)}}
+.nm{font-family:var(--f-mono);font-size:.84rem;white-space:nowrap;font-weight:500}
+.nm::before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:8px;background:var(--dot,var(--ext));vertical-align:-1px}
+.nm.dir{font-weight:600}
+.why{font-size:.88rem;display:block}
+.why .loc{font-family:var(--f-mono);font-size:.76rem;color:var(--muted);margin-right:6px;font-variant-numeric:tabular-nums}
+.d-orch{--dot:var(--orch)} .d-core{--dot:var(--core)} .d-agent{--dot:var(--agent)} .d-human{--dot:var(--human)} .d-record{--dot:var(--record)} .d-ext{--dot:var(--ext)} .d-safe{--dot:var(--safe)}
+.f{display:inline-block;font-family:var(--f-mono);font-size:.7rem;padding:.08rem .45rem;border-radius:4px;border:1px solid;white-space:nowrap;margin-left:4px}
+.f-new{color:var(--orch);border-color:var(--orch);border-style:dashed} .f-keep{color:var(--core);border-color:var(--core)}
+.tree[data-hl="core"] li:not([data-c~="core"]) > .row,
+.tree[data-hl="agent"] li:not([data-c~="agent"]) > .row,
+.tree[data-hl="orch"] li:not([data-c~="orch"]) > .row,
+.tree[data-hl="record"] li:not([data-c~="record"]) > .row,
+.tree[data-hl="path"] li:not([data-p]) > .row,
+.tree[data-hl="exists"] li:not([data-f]) > .row{opacity:.28}
+/* svg */
+.dg{font-family:var(--f-body);font-size:13px}
+.dg text{fill:var(--ink)} .dg .mu{fill:var(--muted)}
+.dg .mono{font-family:var(--f-mono);font-size:11.5px} .dg .sm{font-size:11.5px} .dg .b{font-weight:600}
+.dg .big{font-family:var(--f-display);font-weight:800;font-size:17px}
+.dg rect{stroke-width:1.5}
+.dg .orch{fill:var(--orch-soft);stroke:var(--orch)} .dg .core{fill:var(--core-soft);stroke:var(--core)}
+.dg .agent{fill:var(--agent-soft);stroke:var(--agent)} .dg .human{fill:var(--human-soft);stroke:var(--human)}
+.dg .record{fill:var(--record-soft);stroke:var(--record)} .dg .ext{fill:var(--ext-soft);stroke:var(--ext)}
+.dg .safe{fill:var(--safe-soft);stroke:var(--safe)} .dg .box{fill:var(--surface);stroke:var(--line)}
+.dg .l{fill:none;stroke:var(--muted);stroke-width:1.6} .dg .l-orch{stroke:var(--orch)} .dg .l-safe{stroke:var(--safe)} .dg .l-human{stroke:var(--human)} .dg .l-record{stroke:var(--record)} .dg .soft{stroke-dasharray:6 5}
+.mk{stroke:none} .mk.mu{fill:var(--muted)} .mk.orch{fill:var(--orch)} .mk.safe{fill:var(--safe)} .mk.human{fill:var(--human)} .mk.record{fill:var(--record)}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.row{transition:none}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <marker id="a-mu" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk mu" d="M0,0 L10,5 L0,10 z"/></marker>
+    <marker id="a-orch" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk orch" d="M0,0 L10,5 L0,10 z"/></marker>
+    <marker id="a-safe" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk safe" d="M0,0 L10,5 L0,10 z"/></marker>
+    <marker id="a-human" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk human" d="M0,0 L10,5 L0,10 z"/></marker>
+    <marker id="a-record" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk record" d="M0,0 L10,5 L0,10 z"/></marker>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <nav class="rail" aria-label="Chapters">
+    <span class="label">Padakan blueprint</span>
+    <ol>
+      <li><a href="#goal"><span class="n">01</span>The goal</a></li>
+      <li><a href="#lanes"><span class="n">02</span>Five lanes</a></li>
+      <li><a href="#roles"><span class="n">03</span>Who decides, who works</a></li>
+      <li><a href="#pipeline"><span class="n">04</span>The build pipeline</a></li>
+      <li><a href="#human"><span class="n">05</span>Where the human acts</a></li>
+      <li><a href="#trees"><span class="n">06</span>A tree's life</a></li>
+      <li><a href="#plugin"><span class="n">07</span>The plugin on disk</a></li>
+      <li><a href="#records"><span class="n">08</span>The records folder</a></li>
+      <li><a href="#env"><span class="n">09</span>Everything in .env</a></li>
+      <li><a href="#tools"><span class="n">10</span>Tools and partners</a></li>
+      <li><a href="#decide"><span class="n">11</span>Your decisions</a></li>
+    </ol>
+    <span class="keys"><kbd>J</kbd> next chapter · <kbd>K</kbd> previous</span>
+  </nav>
+
+  <main>
+    <header class="top">
+      <span class="eyebrow">Design · October 2026 · plugin not built yet</span>
+      <h1>Padakan Blueprint</h1>
+      <p class="lede">Padakan is a Claude Code plugin that lets coding agents plan, build, verify and ship on their own, and lets a change reach production only once the system has proven it safe. This page walks through the architecture and the plugin plan, and ends with the decisions that unblock the build.</p>
+      <dl class="facts">
+        <div><dt>Human gates</dt><dd>1 up front, then cost questions only</dd></div>
+        <div><dt>Sub-agents</dt><dd>14, none can call another</dd></div>
+        <div><dt>Commands</dt><dd>11 under <code>/padakan:</code></dd></div>
+        <div><dt>Sandbox providers</dt><dd>3: daytona, devin, local</dd></div>
+        <div><dt>Settings</dt><dd>49 variables, all in <code>.env</code></dd></div>
+        <div><dt>Built today</dt><dd>docs, diagrams, 3 templates</dd></div>
+      </dl>
+      <div class="legend" role="group" aria-label="Diagram colours">
+        <span class="eyebrow">How to read the colours</span>
+        <ul>
+          <li><span class="sw orch"></span>Orchestrator and plugin wiring</li>
+          <li><span class="sw core"></span>Deterministic trust checks</li>
+          <li><span class="sw agent"></span>Agents and sandboxes</li>
+          <li><span class="sw human"></span>Where a human acts</li>
+          <li><span class="sw record"></span>Records, evidence, OKF documents</li>
+          <li><span class="sw ext"></span>External services</li>
+          <li><span class="sw safe"></span>Escalation and rollback</li>
+        </ul>
+      </div>
+      <div class="jump"><a href="#goal">Goal</a><a href="#lanes">Lanes</a><a href="#roles">Roles</a><a href="#pipeline">Pipeline</a><a href="#human">Human</a><a href="#trees">Trees</a><a href="#plugin">Plugin</a><a href="#records">Records</a><a href="#env">.env</a><a href="#tools">Tools</a><a href="#decide">Decisions</a></div>
+    </header>
+
+    <section class="ch" id="goal">
+      <header>
+        <span class="chno">01 · THE GOAL</span>
+        <h2>Trust lives in the system around the agent</h2>
+        <p class="sub">Getting a plausible change from an agent is solved. Shipping it without a human reading it is the open problem, and it is a trust problem.</p>
+      </header>
+      <div class="cols">
+        <div class="card"><span class="tag">Principle 1</span><h3>The agent is a black box</h3><p>Any agent can be plugged in. None of the confidence comes from it; it comes from the checks around it.</p></div>
+        <div class="card"><span class="tag">Principle 2</span><h3>Unclear means a human</h3><p>When a check does not clearly pass, the work is escalated as a ticket. The system never guesses.</p></div>
+        <div class="card"><span class="tag">Principle 3</span><h3>One human gate</h3><p>The human approves the plan once. After that the only question ever asked is a cost question.</p></div>
+        <div class="card"><span class="tag">Principle 4</span><h3>The orchestrator only decides</h3><p>It decides, dispatches, merges, deploys and records. Sub-agents do everything else.</p></div>
+        <div class="card"><span class="tag">Principle 5</span><h3>Never trust a report</h3><p>Every claim is re-checked at its source: the remote commit, the test output, CI, the video.</p></div>
+        <div class="card"><span class="tag">Principle 6</span><h3>Code decides what ships</h3><p>Whether a change may ship is decided by rules and scripts, never by a model's opinion.</p></div>
+        <div class="card"><span class="tag">Principle 7</span><h3>One open knowledge format</h3><p>Every document an agent writes is an Open Knowledge Format document, readable by any agent or human.</p></div>
+      </div>
+      <p class="next">Next: <a href="#lanes">02 · Five lanes</a></p>
+    </section>
+
+    <section class="ch" id="lanes">
+      <header>
+        <span class="chno">02 · FIVE LANES</span>
+        <h2>Plan once, build in a loop, watch production, gate the cost, prove features in CI</h2>
+        <p class="sub">The full system diagram. It scrolls sideways; open <code>diagrams/system-overview.svg</code> for full size.</p>
+      </header>
+      <figure class="fig">
+        <div class="diagram img"><img src="diagrams/system-overview.svg" alt="Padakan system overview: intake and planning, build pipeline, monitor loop, cost gate, and the critical-flow e2e suite in CI, with the orchestrator as the hub."></div>
+        <figcaption>Lanes 1 to 5 from top to bottom. The orchestrator column on the right is the only place decisions are made.</figcaption>
+      </figure>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Lane</th><th>What happens</th></tr></thead>
+          <tbody>
+            <tr><td>1 · Intake and planning</td><td>Target, PRD, plan gate (human), tasks and Linear issues, capability resolver, one manifest per task</td></tr>
+            <tr><td>2 · Build pipeline</td><td>One tree per task, loop engine (plan, build, review, test), verification gates, PR, evidence pack, orchestrator decision, gated deploy</td></tr>
+            <tr><td>3 · Monitor loop</td><td>Cron tick, log collector, triage model, bug-agent, report, a new task and a new tree</td></tr>
+            <tr><td>4 · Cost gate</td><td>Estimate before a costly step; over budget, that tree pauses and the human gets a decision report</td></tr>
+            <tr><td>5 · Critical-flow e2e in CI</td><td>Five documents and a spec per feature, a CI docs gate, an e2e run twice per change, the verdict on the PR</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="next">Next: <a href="#roles">03 · Who decides, who works</a></p>
+    </section>
+
+    <section class="ch" id="roles">
+      <header>
+        <span class="chno">03 · WHO DECIDES, WHO WORKS</span>
+        <h2>The orchestrator reads one line per agent</h2>
+        <p class="sub">Every agent gets one brief, writes its full output to its own file, and returns one short line plus a path. That keeps the orchestrator's context small over long runs.</p>
+      </header>
+      <figure class="fig">
+        <div class="diagram">
+          <svg class="dg" viewBox="0 0 960 310" role="img" aria-labelledby="r1t">
+            <title id="r1t">The human talks only to the orchestrator; the orchestrator briefs six groups of agents and is the only writer of the shared records.</title>
+            <rect class="human" x="20" y="125" width="190" height="80" rx="10"/>
+            <text class="b" x="115" y="152" text-anchor="middle">Human</text>
+            <text class="sm mu" x="115" y="172" text-anchor="middle">approves the plan once</text>
+            <text class="sm mu" x="115" y="190" text-anchor="middle">answers cost questions</text>
+            <path class="l l-human" d="M210 152 H278" marker-end="url(#a-human)"/>
+            <path class="l l-human" d="M280 182 H212" marker-end="url(#a-human)"/>
+
+            <rect class="orch" x="280" y="110" width="220" height="110" rx="10"/>
+            <text class="big" x="390" y="140" text-anchor="middle">Orchestrator</text>
+            <text class="sm" x="390" y="164" text-anchor="middle">decides · dispatches</text>
+            <text class="sm" x="390" y="184" text-anchor="middle">merges · deploys · records</text>
+            <text class="sm mu" x="390" y="204" text-anchor="middle">reads one line per agent</text>
+
+            <path class="l l-record" d="M390 220 V246" marker-end="url(#a-record)"/>
+            <rect class="record" x="280" y="248" width="220" height="50" rx="10"/>
+            <text class="b" x="390" y="270" text-anchor="middle">Records folder</text>
+            <text class="sm mu" x="390" y="288" text-anchor="middle">an OKF bundle next to the repo</text>
+
+            <path class="l l-orch" d="M500 165 H550"/>
+            <path class="l l-orch" d="M550 34 V274"/>
+            <path class="l l-orch" d="M550 34 H598" marker-end="url(#a-orch)"/>
+            <path class="l l-orch" d="M550 82 H598" marker-end="url(#a-orch)"/>
+            <path class="l l-orch" d="M550 130 H598" marker-end="url(#a-orch)"/>
+            <path class="l l-orch" d="M550 178 H598" marker-end="url(#a-orch)"/>
+            <path class="l l-orch" d="M550 226 H598" marker-end="url(#a-orch)"/>
+            <path class="l l-orch" d="M550 274 H598" marker-end="url(#a-orch)"/>
+
+            <rect class="agent" x="600" y="14" width="340" height="40" rx="8"/>
+            <text class="b" x="614" y="30">Plan</text>
+            <text class="sm mu" x="614" y="46">planner · capability-resolver · test-writer</text>
+            <rect class="agent" x="600" y="62" width="340" height="40" rx="8"/>
+            <text class="b" x="614" y="78">Work in a tree</text>
+            <text class="sm mu" x="614" y="94">tree-operator · builder (the black box)</text>
+            <rect class="core" x="600" y="110" width="340" height="40" rx="8"/>
+            <text class="b" x="614" y="126">Verify</text>
+            <text class="sm mu" x="614" y="142">verifier · test-runner · security-auditor</text>
+            <rect class="record" x="600" y="158" width="340" height="40" rx="8"/>
+            <text class="b" x="614" y="174">Prove</text>
+            <text class="sm mu" x="614" y="190">acceptance-tester · evidence-builder</text>
+            <rect class="agent" x="600" y="206" width="340" height="40" rx="8"/>
+            <text class="b" x="614" y="222">Watch and report</text>
+            <text class="sm mu" x="614" y="238">bug-agent · report-writer</text>
+            <rect class="agent" x="600" y="254" width="340" height="40" rx="8"/>
+            <text class="b" x="614" y="270">Design</text>
+            <text class="sm mu" x="614" y="286">ux-designer · design-implementer (read brand.md)</text>
+          </svg>
+        </div>
+        <figcaption>The orchestrator never reads code, logs, diffs or screens. An ambiguous result line counts as a failed check.</figcaption>
+      </figure>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Agent</th><th>Job</th><th>Returns</th></tr></thead>
+          <tbody>
+            <tr><td><code>planner</code></td><td>PRD, user stories, task plan</td><td><code>PLAN=&lt;path&gt; TASKS=&lt;n&gt;</code></td></tr>
+            <tr><td><code>capability-resolver</code></td><td>tools per task and their cost estimate</td><td><code>MANIFEST=&lt;path&gt; COST=&lt;usd&gt;</code></td></tr>
+            <tr><td><code>test-writer</code></td><td>the tests that prove a task's acceptance criteria</td><td><code>TESTS=&lt;paths&gt; ACS=&lt;n&gt;</code></td></tr>
+            <tr><td><code>tree-operator</code></td><td>plant, attach, brief, poll, retire a tree</td><td><code>TREE=&lt;id&gt; CI= PR= ACS= EVIDENCE= BLOCKED=</code></td></tr>
+            <tr><td><code>verifier</code></td><td>re-check claims, run the <code>core/</code> checks</td><td><code>VERDICT=PASS|FAIL CHECKS=&lt;path&gt;</code></td></tr>
+            <tr><td><code>evidence-builder</code></td><td>the four-item evidence pack and report</td><td><code>PACK=&lt;path&gt; ITEMS=4/4</code></td></tr>
+            <tr><td><code>bug-agent</code></td><td>one monitor tick: clusters, root cause, fixable by an agent?</td><td><code>CLUSTERS=&lt;n&gt; FIXABLE=&lt;keys&gt;</code></td></tr>
+            <tr><td><code>report-writer</code></td><td>the cost decision report</td><td><code>DECISION=&lt;path&gt;</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="next">Next: <a href="#pipeline">04 · The build pipeline</a></p>
+    </section>
+
+    <section class="ch" id="pipeline">
+      <header>
+        <span class="chno">04 · THE BUILD PIPELINE</span>
+        <h2>A change ships when it is proven, not when the agent says it is done</h2>
+        <p class="sub">Any task, a feature or a fix, runs the same path. The loop inside the tree is the agent's business; the gates after it are deterministic.</p>
+      </header>
+      <figure class="fig">
+        <div class="diagram">
+          <svg class="dg" viewBox="0 0 960 264" role="img" aria-labelledby="p1t">
+            <title id="p1t">Task, the loop in the tree, verification gates, PR with evidence, and gated deploy in a row; an unclear gate or a slipping SLO escalates to a human; every step is written to the audit trail.</title>
+            <rect class="orch" x="20" y="40" width="90" height="80" rx="10"/>
+            <text class="b" x="65" y="85" text-anchor="middle">Task</text>
+            <path class="l" d="M110 80 H138" marker-end="url(#a-mu)"/>
+            <rect class="agent" x="140" y="40" width="200" height="80" rx="10"/>
+            <text class="b" x="240" y="66" text-anchor="middle">In the tree</text>
+            <text class="sm mu" x="240" y="86" text-anchor="middle">plan → build → review → test</text>
+            <text class="sm mu" x="240" y="104" text-anchor="middle">fail: back to plan</text>
+            <path class="l" d="M340 80 H368" marker-end="url(#a-mu)"/>
+            <rect class="core" x="370" y="40" width="200" height="80" rx="10"/>
+            <text class="b" x="470" y="66" text-anchor="middle">Verification gates</text>
+            <text class="sm mu" x="470" y="86" text-anchor="middle">proven twice · no regressions</text>
+            <text class="sm mu" x="470" y="104" text-anchor="middle">diff inspection · OKF valid</text>
+            <path class="l" d="M570 80 H598" marker-end="url(#a-mu)"/>
+            <rect class="record" x="600" y="40" width="150" height="80" rx="10"/>
+            <text class="b" x="675" y="66" text-anchor="middle">PR + evidence</text>
+            <text class="sm mu" x="675" y="86" text-anchor="middle">4-item pack</text>
+            <text class="sm mu" x="675" y="104" text-anchor="middle">re-checked</text>
+            <path class="l" d="M750 80 H778" marker-end="url(#a-mu)"/>
+            <rect class="core" x="780" y="40" width="160" height="80" rx="10"/>
+            <text class="b" x="860" y="66" text-anchor="middle">Gated deploy</text>
+            <text class="sm mu" x="860" y="86" text-anchor="middle">flag → canary</text>
+            <text class="sm mu" x="860" y="104" text-anchor="middle">SLO watch</text>
+
+            <path class="l l-safe" d="M470 120 V166" marker-end="url(#a-safe)"/>
+            <text class="sm" x="480" y="148">unclear</text>
+            <path class="l l-safe" d="M860 120 V166" marker-end="url(#a-safe)"/>
+            <text class="sm" x="870" y="148">rollback</text>
+            <rect class="safe" x="370" y="168" width="570" height="36" rx="8"/>
+            <text class="b" x="655" y="191" text-anchor="middle">Escalate to a human when a gate does not clearly pass</text>
+
+            <rect class="record" x="20" y="220" width="920" height="32" rx="8"/>
+            <text class="sm b" x="480" y="241" text-anchor="middle">Audit trail: every step, hash-chained and replayable, with the Entire checkpoint id when enabled</text>
+          </svg>
+        </div>
+        <figcaption>The agent's own checks inside the tree are a first filter. The decision to ship comes only from the green boxes.</figcaption>
+      </figure>
+      <div class="cols">
+        <div class="card"><h3>Proven twice</h3><p>The task's tests pass in the suite, and every acceptance criterion is proven live against the running app with the verify kit. <code>unproven</code> is never a pass.</p></div>
+        <div class="card"><h3>No regressions</h3><p>The full suite stays green, and the critical-flow e2e suite is not <code>FAIL</code>, <code>BROKEN</code> or <code>STOPPED</code>.</p></div>
+        <div class="card"><h3>Diff inspection</h3><p>Within the size and file caps from <code>.env</code> (blast radius from Entire Graph when enabled), no protected path, no secret, no unapproved dependency change.</p></div>
+        <div class="card"><h3>Evidence pack</h3><p>Video of the change working, architecture of the change, files touched (from git), tests and CI. Each item is re-checked; a missing one is a failed check.</p></div>
+      </div>
+      <p class="next">Next: <a href="#human">05 · Where the human acts</a></p>
+    </section>
+
+<section class="ch" id="human">
+      <header>
+        <span class="chno">05 · WHERE THE HUMAN ACTS</span>
+        <h2>Once up front, then only when money is at stake</h2>
+        <p class="sub">Agents never ask questions. Anything uncertain is decided by rule or escalated as a ticket that nothing waits on.</p>
+      </header>
+      <div class="cols">
+        <div class="card"><span class="tag">Plan gate · once</span><h3>Six approvals</h3><ol><li>PRD: architecture, tech stack, security</li><li>Task plan and user stories</li><li>Each task's capability manifest</li><li>Budget caps per run, issue and step</li><li><code>brand.md</code>: logo, palette, type, voice</li><li>Connect the repo to Entire for search? Asked once, only when Entire is enabled</li></ol></div>
+        <div class="card"><span class="tag">Cost gate · when over budget</span><h3>A decision report</h3><ul><li>What the step is and its issue</li><li>Why: the claim it proves, the risk it covers</li><li>Cost range and budget left</li><li>Cheaper options and what each leaves uncovered</li><li>What stays unverified if skipped</li><li>A recommendation</li></ul></div>
+        <div class="card"><span class="tag">Answers</span><h3>Five choices</h3><p>Approve, run the cheaper option, skip, raise the budget, or abort. No answer keeps the tree paused and spends nothing.</p><p>Never waived for cost: the task's tests, the regression suite and diff inspection. A skipped optional check blocks auto-deploy.</p></div>
+      </div>
+      <div class="note human"><span class="label">Instead of asking</span><p>An agent with a question about a feature asks Entire first (past sessions for intent, the graph for code), then takes the conservative choice and records it, or reports <code>BLOCKED=&lt;reason&gt;</code>.</p></div>
+      <p class="next">Next: <a href="#trees">06 · A tree's life</a></p>
+    </section>
+
+    <section class="ch" id="trees">
+      <header>
+        <span class="chno">06 · A TREE'S LIFE</span>
+        <h2>One sandbox per task, from plant to retire</h2>
+        <p class="sub">A tree is one sandbox with one repo, one branch and its own signed-in agent, watched in herdr. <code>tree-operator</code> runs these steps through the <code>orchestrator/</code> scripts.</p>
+      </header>
+      <figure class="fig">
+        <div class="diagram">
+          <svg class="dg" viewBox="0 0 960 130" role="img" aria-labelledby="t1t">
+            <title id="t1t">Eight steps: plant, attach, brief, poll, verify, evidence, merge, retire.</title>
+            <rect class="agent" x="17" y="24" width="100" height="56" rx="8"/><text class="b" x="67" y="48" text-anchor="middle">plant</text><text class="sm mu" x="67" y="66" text-anchor="middle">create · seed</text>
+            <path class="l" d="M117 52 H133" marker-end="url(#a-mu)"/>
+            <rect class="agent" x="135" y="24" width="100" height="56" rx="8"/><text class="b" x="185" y="48" text-anchor="middle">attach</text><text class="sm mu" x="185" y="66" text-anchor="middle">herdr pane</text>
+            <path class="l" d="M235 52 H251" marker-end="url(#a-mu)"/>
+            <rect class="agent" x="253" y="24" width="100" height="56" rx="8"/><text class="b" x="303" y="48" text-anchor="middle">brief</text><text class="sm mu" x="303" y="66" text-anchor="middle">OKF brief</text>
+            <path class="l" d="M353 52 H369" marker-end="url(#a-mu)"/>
+            <rect class="agent" x="371" y="24" width="100" height="56" rx="8"/><text class="b" x="421" y="48" text-anchor="middle">poll</text><text class="sm mu" x="421" y="66" text-anchor="middle">effects only</text>
+            <path class="l" d="M471 52 H487" marker-end="url(#a-mu)"/>
+            <rect class="core" x="489" y="24" width="100" height="56" rx="8"/><text class="b" x="539" y="48" text-anchor="middle">verify</text><text class="sm mu" x="539" y="66" text-anchor="middle">core checks</text>
+            <path class="l" d="M589 52 H605" marker-end="url(#a-mu)"/>
+            <rect class="record" x="607" y="24" width="100" height="56" rx="8"/><text class="b" x="657" y="48" text-anchor="middle">evidence</text><text class="sm mu" x="657" y="66" text-anchor="middle">4 items</text>
+            <path class="l" d="M707 52 H723" marker-end="url(#a-mu)"/>
+            <rect class="orch" x="725" y="24" width="100" height="56" rx="8"/><text class="b" x="775" y="48" text-anchor="middle">merge</text><text class="sm mu" x="775" y="66" text-anchor="middle">one at a time</text>
+            <path class="l" d="M825 52 H841" marker-end="url(#a-mu)"/>
+            <rect class="agent" x="843" y="24" width="100" height="56" rx="8"/><text class="b" x="893" y="48" text-anchor="middle">retire</text><text class="sm mu" x="893" y="66" text-anchor="middle">pull record</text>
+            <text class="sm mu" x="480" y="112" text-anchor="middle">The remote branch is the asset; the sandbox is scaffolding. A wedged tree is recycled, never nursed.</text>
+          </svg>
+        </div>
+        <figcaption>Retire pulls a seven-section record written by the building agent, then deletes the sandbox. Delete refuses when work is unpushed.</figcaption>
+      </figure>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Provider</th><th>What a tree is</th><th>Use</th></tr></thead>
+          <tbody>
+            <tr><td><span class="pill ext">daytona</span> default</td><td>Linux container from a baked snapshot: Claude Code, herdr, Entire, Playwright, gh; no secrets in the image</td><td>web and backend work</td></tr>
+            <tr><td><span class="pill ext">devin</span></td><td>a Devin session in Devin's own cloud VM, driven only through the Devin API; no herdr or other agent inside</td><td>parallel work, with Devin as the agent</td></tr>
+            <tr><td><span class="pill ext">local</span></td><td>a git worktree on the orchestrator's machine</td><td>development, and the Mac host for iOS and Android device probes</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="next">Next: <a href="#plugin">07 · The plugin on disk</a></p>
+    </section>
+
+    <section class="ch" id="plugin">
+      <header>
+        <span class="chno">07 · THE PLUGIN ON DISK</span>
+        <h2>Three layers: steps, sandboxes, trust checks</h2>
+        <p class="sub">The dot shows the class. The tag says whether it exists today. The buttons dim everything else; "Build path" lights what one <code>/padakan:build</code> touches.</p>
+      </header>
+      <div class="hl" role="group" aria-label="Highlight in the plugin tree">
+        <span class="eyebrow">Highlight</span>
+        <button type="button" data-tree="tp" data-hl="" aria-pressed="true">Everything</button>
+        <button type="button" data-tree="tp" data-hl="orch" aria-pressed="false">Orchestrator</button>
+        <button type="button" data-tree="tp" data-hl="agent" aria-pressed="false">Agents and sandboxes</button>
+        <button type="button" data-tree="tp" data-hl="core" aria-pressed="false">Trust checks</button>
+        <button type="button" data-tree="tp" data-hl="record" aria-pressed="false">Docs and records</button>
+        <button type="button" data-tree="tp" data-hl="path" aria-pressed="false">Build path</button>
+        <button type="button" data-tree="tp" data-hl="exists" aria-pressed="false">Exists today</button>
+      </div>
+      <div class="tree" id="tp" data-hl="">
+        <ul>
+          <li data-c="orch" data-p="1"><div class="row"><span class="nm dir d-orch">Padakan/</span><span class="why">The repo root is the plugin.</span></div>
+            <ul>
+              <li data-c="orch"><div class="row"><span class="nm d-orch">.claude-plugin/</span><span class="why"><span class="loc">2 files</span><code>plugin.json</code> and a local <code>marketplace.json</code>. <span class="f f-new">planned</span></span></div></li>
+              <li data-c="orch" data-p="1"><div class="row"><span class="nm d-orch">CLAUDE.md</span><span class="why">The orchestrator's rules: decide, dispatch, merge, deploy, record; delegate the rest. <span class="f f-new">planned</span></span></div></li>
+              <li data-c="orch" data-p="1"><div class="row"><span class="nm d-orch">.env.example</span><span class="why">All 49 settings, documented. Never holds values. <span class="f f-new">planned</span></span></div></li>
+              <li data-c="orch" data-p="1"><div class="row"><span class="nm dir d-orch">commands/</span><span class="why"><span class="loc">11</span>onboard · plan · build · watch · decide · feature · evidence · status · replay · pause · rollback. Thin: each follows the scripts. <span class="f f-new">planned</span></span></div></li>
+              <li data-c="agent" data-p="1"><div class="row"><span class="nm dir d-agent">agents/</span><span class="why"><span class="loc">14</span>One file per sub-agent. None has the Task tool. <span class="f f-new">planned</span></span></div></li>
+              <li data-c="agent record"><div class="row"><span class="nm dir d-agent">skills/</span><span class="why"><span class="loc">13</span>okf · no-questions · cost-gate · escalation · entire-context · feature-docs · e2e-playbook · evidence-pack · triage-categories · verify-web · verify-ios · verify-android · verify-backend. <span class="f f-new">planned</span></span></div></li>
+              <li data-c="orch core" data-p="1"><div class="row"><span class="nm d-orch">hooks/hooks.json</span><span class="why">Blocks questions except the cost gate, guards protected paths and secrets, writes the audit. <span class="f f-new">planned</span></span></div></li>
+              <li data-c="orch" data-p="1"><div class="row"><span class="nm dir d-orch">orchestrator/</span><span class="why">One script per lifecycle step, run by agents so their output stays out of the orchestrator. <span class="f f-new">planned</span></span></div>
+                <ul>
+                  <li data-c="orch" data-p="1"><div class="row"><span class="nm d-orch">lib/</span><span class="why"><span class="loc">4</span>env.mjs (load order, validation) · records.mjs (records resolver) · herdr.mjs · log.mjs.</span></div></li>
+                  <li data-c="orch" data-p="1"><div class="row"><span class="nm d-orch">plant · attach · brief · poll</span><span class="why"><span class="loc">4</span>Start a tree and drive its agent.</span></div></li>
+                  <li data-c="orch" data-p="1"><div class="row"><span class="nm d-orch">verify · evidence · merge · retire</span><span class="why"><span class="loc">4</span>Prove the result, ship it, close the tree.</span></div></li>
+                  <li data-c="orch"><div class="row"><span class="nm d-orch">tick · doctor · status · ls · recycle</span><span class="why"><span class="loc">5</span>Monitor tick, environment checks, state, rescue.</span></div></li>
+                </ul>
+              </li>
+              <li data-c="orch"><div class="row"><span class="nm d-orch">bin/</span><span class="why"><span class="loc">2</span><code>padakan &lt;step&gt;</code> and <code>padakan-run</code> (headless outer loop for CI). <span class="f f-new">planned</span></span></div></li>
+              <li data-c="agent" data-p="1"><div class="row"><span class="nm dir d-agent">sandboxes/</span><span class="why">A gateway, a shared contract, and one folder per provider, chosen in <code>.env</code>. <span class="f f-new">planned</span></span></div>
+                <ul>
+                  <li data-c="agent" data-p="1"><div class="row"><span class="nm d-agent">index.mjs · contract.mjs</span><span class="why"><span class="loc">2</span>Load the provider, write handles, filter secrets.</span></div></li>
+                  <li data-c="agent" data-p="1"><div class="row"><span class="nm d-agent">daytona/</span><span class="why">provider.mjs · doctor.mjs · snapshot/Dockerfile · remote/ (bootstrap, tree CLAUDE.md blocks, record brief).</span></div></li>
+                  <li data-c="agent"><div class="row"><span class="nm d-agent">devin/</span><span class="why">provider.mjs for Devin API sessions.</span></div></li>
+                  <li data-c="agent"><div class="row"><span class="nm d-agent">local/</span><span class="why">provider.mjs for git worktrees and the Mac device host.</span></div></li>
+                </ul>
+              </li>
+              <li data-c="core" data-p="1"><div class="row"><span class="nm dir d-core">core/</span><span class="why">Deterministic and unit-tested. No model decides here. <span class="f f-new">planned</span></span></div>
+                <ul>
+                  <li data-c="core" data-p="1"><div class="row"><span class="nm d-core">gates · diffcheck</span><span class="why"><span class="loc">2</span>The verification gates and diff inspection.</span></div></li>
+                  <li data-c="core" data-p="1"><div class="row"><span class="nm d-core">deploy · audit · cost · ledger</span><span class="why"><span class="loc">4</span>Gated deploy, hash-chained audit, budget, known defects.</span></div></li>
+                  <li data-c="core record"><div class="row"><span class="nm d-core">okf · docs-gate · report</span><span class="why"><span class="loc">3</span>OKF validation, the CI docs gate, the evidence report.</span></div></li>
+                  <li data-c="core"><div class="row"><span class="nm d-core">entire · models · resolver · triage · collect-logs</span><span class="why"><span class="loc">5</span>Entire wrapper, the Nebius client, schema-validated model output, log clusters.</span></div></li>
+                  <li data-c="core agent"><div class="row"><span class="nm d-core">harness/</span><span class="why"><span class="loc">3</span>claude · devin · openai-compat.</span></div></li>
+                </ul>
+              </li>
+              <li data-c="core"><div class="row"><span class="nm d-core">schemas/ · registry/</span><span class="why">JSON Schemas for every result; the capability catalog and triage categories. <span class="f f-new">planned</span></span></div></li>
+              <li data-c="record" data-f="1"><div class="row"><span class="nm dir d-record">templates/</span><span class="why"><span class="loc">3 today</span>evidence-report.md · evidence-report.html · brand.md; brief, decision report, record and feature docs to come. <span class="f f-keep">exists</span></span></div></li>
+              <li data-c="core"><div class="row"><span class="nm d-core">ci/ · test/</span><span class="why">CI templates (docs gate, e2e twice per change, cron); <code>node --test</code> with mock daytona and herdr CLIs. <span class="f f-new">planned</span></span></div></li>
+              <li data-c="record" data-f="1"><div class="row"><span class="nm dir d-record">documentation/</span><span class="why">tech_docs (architecture, plugin plan, diagrams, this page) · infrastructure (TOOLS.md). <span class="f f-keep">exists</span></span></div></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+      <p class="next">Next: <a href="#records">08 · The records folder</a></p>
+    </section>
+
+    <section class="ch" id="records">
+      <header>
+        <span class="chno">08 · THE RECORDS FOLDER</span>
+        <h2>Everything that happened, next to the repo, as an OKF bundle</h2>
+        <p class="sub">Named in <code>.env</code> (default <code>&lt;repo&gt;-padakan</code>). Never committed to the repo. The orchestrator writes the shared files; each agent writes only its own.</p>
+      </header>
+      <div class="tree">
+        <ul>
+          <li><div class="row"><span class="nm dir d-record">&lt;repo&gt;-padakan/</span><span class="why">One OKF bundle per project.</span></div>
+            <ul>
+              <li><div class="row"><span class="nm d-orch">.env</span><span class="why">This project's settings and credentials; survives plugin updates.</span></div></li>
+              <li><div class="row"><span class="nm d-human">brand.md · plan/</span><span class="why">What the human approved at the plan gate.</span></div></li>
+              <li><div class="row"><span class="nm d-orch">state.json</span><span class="why">Resume point after a restart or compaction.</span></div></li>
+              <li><div class="row"><span class="nm dir d-record">tasks/&lt;KEY&gt;/</span><span class="why">task · manifest · brief · diff · checks/ · evidence/ · record.md · deploy · entire · logs/&lt;agent&gt;.md</span></div></li>
+              <li><div class="row"><span class="nm d-agent">sandboxes/&lt;id&gt;.json</span><span class="why">One handle per live tree.</span></div></li>
+              <li><div class="row"><span class="nm d-human">decisions/</span><span class="why">Cost decision reports and the answers.</span></div></li>
+              <li><div class="row"><span class="nm d-core">audit/ · cost/ · ledger/</span><span class="why">Hash-chained audit, spend ledger, known defects (machine data).</span></div></li>
+              <li><div class="row"><span class="nm d-agent">monitor/&lt;tick&gt;/</span><span class="why">Clusters, triage and bug-agent reports per cron tick.</span></div></li>
+              <li><div class="row"><span class="nm d-record">index.md · log.md</span><span class="why">OKF index (one row per task) and the human-readable history.</span></div></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+      <div class="cols">
+        <div class="card"><h3>Every agent document is OKF</h3><p>Markdown with YAML frontmatter, one concept per file, the path as its identity, markdown links between concepts. <code>type</code> is required; Padakan agents always write <code>title</code>, <code>description</code>, <code>tags</code> and <code>timestamp</code>, and <code>resource</code> when there is a URL.</p></div>
+        <div class="card"><h3>Enforced by code</h3><p><code>core/okf.mjs</code> checks every document an agent wrote: a <code>type</code>, an ISO timestamp, links that resolve. An invalid document is a failed check.</p></div>
+      </div>
+      <pre><code>---
+type: Evidence Report
+title: PAD-12 · Export the dashboard as CSV
+description: Added CSV export to the dashboard; PASS, auto-ship.
+resource: https://github.com/&lt;owner&gt;/&lt;repo&gt;/pull/12
+tags: [dashboard, evidence]
+timestamp: 2026-10-18T14:22:00Z
+---
+# Verdict
+PASS. See [the record](./record.md) and [the brief](./brief.md).</code></pre>
+      <p class="next">Next: <a href="#env">09 · Everything in .env</a></p>
+    </section>
+
+    <section class="ch" id="env">
+      <header>
+        <span class="chno">09 · EVERYTHING IN .ENV</span>
+        <h2>49 settings, one place, validated on load</h2>
+        <p class="sub">Load order, first value wins: exported environment, then <code>&lt;repo&gt;-padakan/.env</code>, then the plugin <code>.env</code>. An unknown or malformed key fails loudly.</p>
+      </header>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Group</th><th>Count</th><th>Selects</th></tr></thead>
+          <tbody>
+            <tr><td>General</td><td class="num">5</td><td>language (<code>en</code>), records folder name and path, tracker</td></tr>
+            <tr><td>Terminal and driver</td><td class="num">3</td><td>herdr as terminal and driver (headless for CI)</td></tr>
+            <tr><td>Sandboxes</td><td class="num">11</td><td>provider (daytona · devin · local), trees at once, Daytona snapshot, size, timers</td></tr>
+            <tr><td>Agents and models</td><td class="num">12</td><td>harness, tree model, Claude tokens, Nebius key and URL, per-role models, Devin keys and ACU cap</td></tr>
+            <tr><td>Git</td><td class="num">4</td><td>GitHub token source, commit identity</td></tr>
+            <tr><td>Context</td><td class="num">3</td><td>Entire on or off, search on or off, repo</td></tr>
+            <tr><td>Gates</td><td class="num">3</td><td>protected paths, max diff lines and files</td></tr>
+            <tr><td>Cost</td><td class="num">3</td><td>budget caps per run, task, step</td></tr>
+            <tr><td>Monitor</td><td class="num">2</td><td>cron interval, log sources</td></tr>
+            <tr><td>Deploy</td><td class="num">3</td><td>target, canary percent, SLO error rate</td></tr>
+            <tr><td><strong>Total</strong></td><td class="num"><strong>49</strong></td><td>Every variable with its default: <code>PLUGIN-STRUCTURE.md</code> §5</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="next">Next: <a href="#tools">10 · Tools and partners</a></p>
+    </section>
+
+    <section class="ch" id="tools">
+      <header>
+        <span class="chno">10 · TOOLS AND PARTNERS</span>
+        <h2>What each outside tool does for us</h2>
+        <p class="sub">Full list with links: <code>documentation/infrastructure/TOOLS.md</code>.</p>
+      </header>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Tool</th><th>Role</th></tr></thead>
+          <tbody>
+            <tr><td><span class="pill ext">Nebius Token Factory</span></td><td>OpenAI-compatible API for the decision models and the <code>openai-compat</code> builder</td></tr>
+            <tr><td><span class="pill ext">NVIDIA Nemotron</span></td><td>default triage and resolver model (<code>nvidia/nemotron-3-super-120b-a12b</code>), chosen for structured output</td></tr>
+            <tr><td><span class="pill ext">Daytona</span></td><td>default sandboxes, one per task</td></tr>
+            <tr><td><span class="pill ext">Devin</span></td><td>Devin sessions in their own cloud VMs, several in parallel</td></tr>
+            <tr><td><span class="pill ext">herdr</span></td><td>the terminal where every tree agent runs and can be watched</td></tr>
+            <tr><td><span class="pill ext">Entire</span></td><td>optional: sessions linked to commits, a local code graph, search over past sessions</td></tr>
+            <tr><td><span class="pill ext">Linear</span></td><td>issues, filed only by the orchestrator</td></tr>
+            <tr><td><span class="pill ext">Playwright · DevTools MCP · MobileBuildMCP · AndroidBuildMCP</span></td><td>verify kits for web, iOS and Android</td></tr>
+            <tr><td><span class="pill record">Open Knowledge Format</span></td><td>the format of every document agents write</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="next">Next: <a href="#decide">11 · Your decisions</a></p>
+    </section>
+
+    <section class="ch" id="decide">
+      <header>
+        <span class="chno">11 · YOUR DECISIONS</span>
+        <h2>Four answers unblock the build</h2>
+        <p class="sub">The build starts with <code>orchestrator/lib/env.mjs</code>, <code>.env.example</code> and the records resolver once these are answered. A code is enough to answer.</p>
+      </header>
+      <div class="ask">
+        <div class="dec"><span class="k">B1</span><div class="b"><p>Write the scripts in Node (<code>.mjs</code>, zero dependencies) instead of bash?</p><p class="rec">Recommended: <strong>yes.</strong> Mock CLIs make every provider testable with <code>node --test</code>.</p></div></div>
+        <div class="dec"><span class="k">B2</span><div class="b"><p>Use Nemotron 3 Super on Nebius as the default triage and resolver model until we measure alternatives?</p><p class="rec">Recommended: <strong>yes.</strong> It supports structured output and runs on Nebius.</p></div></div>
+        <div class="dec"><span class="k">B3</span><div class="b"><p>Keep a simulated canary as the deploy target until a real platform is chosen?</p><p class="rec">Recommended: <strong>yes.</strong> The gate logic is the same; the platform is an adapter.</p></div></div>
+        <div class="dec"><span class="k">B4</span><div class="b"><p>Sign the audit trail with a hash chain plus a per-entry signature from a local key?</p><p class="rec">Recommended: <strong>yes.</strong> Cheap and replayable; an external transparency service can come later.</p></div></div>
+      </div>
+    </section>
+  </main>
+</div>
+<script>
+(function(){
+  var secs=[].slice.call(document.querySelectorAll('section.ch'));
+  var links={};
+  [].forEach.call(document.querySelectorAll('.rail a'),function(a){links[a.getAttribute('href').slice(1)]=a;});
+  function current(){var line=window.innerHeight*0.3,idx=-1;secs.forEach(function(s,i){if(s.getBoundingClientRect().top<=line)idx=i;});return idx;}
+  function mark(){
+    var i=current(),id=i>=0?secs[i].id:'';
+    Object.keys(links).forEach(function(k){var on=k===id;links[k].classList.toggle('on',on);if(on)links[k].setAttribute('aria-current','location');else links[k].removeAttribute('aria-current');});
+  }
+  var queued=false;
+  window.addEventListener('scroll',function(){if(queued)return;queued=true;requestAnimationFrame(function(){queued=false;mark();});},{passive:true});
+  mark();
+  document.addEventListener('keydown',function(e){
+    if(e.metaKey||e.ctrlKey||e.altKey)return;
+    var t=e.target;if(t&&(t.isContentEditable||/^(INPUT|TEXTAREA|SELECT|BUTTON)$/.test(t.tagName)))return;
+    var k=(e.key||'').toLowerCase();if(k!=='j'&&k!=='k')return;
+    var i=current();if(k==='k'&&i<=0&&secs[0].getBoundingClientRect().top>-2)return;
+    var n=k==='j'?Math.min(secs.length-1,i+1):Math.max(0,i-1);
+    var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    secs[n].scrollIntoView({behavior:reduce?'auto':'smooth',block:'start'});
+    e.preventDefault();
+  });
+  [].forEach.call(document.querySelectorAll('.hl button'),function(b){
+    b.addEventListener('click',function(){
+      var tree=document.getElementById(b.getAttribute('data-tree'));if(!tree)return;
+      tree.setAttribute('data-hl',b.getAttribute('data-hl'));
+      [].forEach.call(b.parentNode.querySelectorAll('button'),function(o){o.setAttribute('aria-pressed',o===b?'true':'false');});
+    });
+  });
+})();
+</script>
+</body>
+</html>
