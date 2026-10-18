@@ -21,8 +21,8 @@ Every external service, framework and tool Padakan uses, what it does for us, an
 
 | Tool | Role | Configured by | Link |
 |---|---|---|---|
-| **Daytona** | Default sandbox provider: one disposable sandbox ("tree") per task, from a baked snapshot. Container limits: 4 vCPU, 8 GB RAM, 10 GB disk per sandbox by default | `DAYTONA_*` | https://www.daytona.io/docs |
-| **Devin** | `devin` sandbox provider: Devin cloud sessions through the Devin API (v3, service user token, org id, ACU cap, structured output), several in parallel | `DEVIN_API_KEY`, `DEVIN_ORG_ID`, `DEVIN_MAX_ACU` | https://docs.devin.ai/api-reference |
+| **Devin** | Default sandbox provider: one session per task in a VM booted from our snapshot (blueprints); Linux, macOS (Xcode, iOS Simulator) or Windows; Computer Use with recorded testing; loads Claude Code plugins. Research: [DEVIN.md](DEVIN.md) | `DEVIN_API_KEY`, `DEVIN_ORG_ID`, `DEVIN_PLATFORM`, `DEVIN_MAX_ACU` | https://docs.devin.ai |
+| **Daytona** | Alternative provider when we run our own agent (Claude Code + herdr) in a sandbox we control. 10 GB disk per sandbox by default | `DAYTONA_*` | https://www.daytona.io/docs |
 | **GitHub + gh CLI** | Clone, branch, push, PRs, CI status | `GH_TOKEN_SOURCE`, `GH_PAT` | https://cli.github.com |
 
 ## Context

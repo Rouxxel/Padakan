@@ -139,9 +139,9 @@
   <!-- ================= LANE 2 ================= -->
   <rect x="50" y="340" width="200" height="125" rx="10" fill="#1e293b" stroke="#0f172a" stroke-width="2.5"/>
   <text x="150" y="366" font-size="17" font-weight="700" text-anchor="middle" fill="#f8fafc">Harness</text>
-  <text x="150" y="388" font-size="12" text-anchor="middle" fill="#cbd5e1">Daytona sandbox or</text>
-  <text x="150" y="404" font-size="12" text-anchor="middle" fill="#cbd5e1">Devin session per task,</text>
-  <text x="150" y="420" font-size="12" text-anchor="middle" fill="#cbd5e1">watched in herdr</text>
+  <text x="150" y="388" font-size="12" text-anchor="middle" fill="#cbd5e1">Devin session (default)</text>
+  <text x="150" y="404" font-size="12" text-anchor="middle" fill="#cbd5e1">or Daytona sandbox,</text>
+  <text x="150" y="420" font-size="12" text-anchor="middle" fill="#cbd5e1">one per task</text>
   <text x="150" y="444" font-size="12" text-anchor="middle" fill="#94a3b8">Claude · Pi · Codex</text>
   <text x="150" y="459" font-size="12" text-anchor="middle" fill="#94a3b8">OpenCode · Devin</text>
   <line x1="250" y1="395" x2="298" y2="395" stroke="#334155" stroke-width="2.5" marker-end="url(#a)"/>
