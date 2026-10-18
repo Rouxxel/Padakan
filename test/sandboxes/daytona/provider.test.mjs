@@ -266,7 +266,7 @@ test('brief delivers .padakan/BRIEF.md and starts the agent (headless) or prompt
     assert.equal((await p.gw.get('pad-1')).state, 'working');
     assert.match(await readFile(join(p.tree, '.padakan', 'BRIEF.md'), 'utf8'), /# do it/);
     const log = join(p.dt.home('pad-1'), 'claude.log');
-    for (let i = 0; i < 50 && !existsSync(log); i++) await new Promise((res) => setTimeout(res, 20));
+    for (let i = 0; i < 250 && !existsSync(log); i++) await new Promise((res) => setTimeout(res, 20));
     assert.match(await readFile(log, 'utf8'), /claude -p Read \.padakan\/BRIEF\.md.* --dangerously-skip-permissions/);
   } finally {
     await cleanup(p);

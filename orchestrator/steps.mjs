@@ -137,12 +137,12 @@ export async function poll(ctx, args) {
   const pr = sha ? await ctx.github.prForBranch(ctx.repo, task.branch) : null;
   const checks = pr ? await ctx.github.prChecks(ctx.repo, pr.number) : { ci: 'none', checks: [] };
   const done = !!(sha && commits > 0 && pr && pr.headRefOid === sha);
-  const effect = { state, remote_sha: sha, commits, pr, ci: checks.ci, checks: checks.checks, done, at: ctx.now() };
+  const effect = { state, agent: st.agent || null, remote_sha: sha, commits, pr, ci: checks.ci, checks: checks.checks, done, at: ctx.now() };
   const dir = await taskDir(ctx.records, key);
   await mkdir(join(dir, 'checks'), { recursive: true });
   await writeFile(join(dir, 'checks', 'poll.json'), `${JSON.stringify(effect, null, 2)}\n`);
   await updateTask(ctx.records, key, { tree_state: state, ...(pr ? { pr: pr.url, pr_number: pr.number } : {}), head: sha }, ctx.now);
-  return ok(`TREE=${handle.id} STATE=${state} PUSHED=${sha ? 'yes' : 'no'} COMMITS=${commits} PR=${pr ? pr.url : 'none'} CI=${checks.ci} EFFECT=${done ? 'done' : 'not-yet'}`);
+  return ok(`TREE=${handle.id} STATE=${state}${st.agent ? ` AGENT=${st.agent}` : ''} PUSHED=${sha ? 'yes' : 'no'} COMMITS=${commits} PR=${pr ? pr.url : 'none'} CI=${checks.ci} EFFECT=${done ? 'done' : 'not-yet'}`);
 }
 
 // ── verify <KEY>: facts in, verdict out ─────────────────────────────────────────────────────────

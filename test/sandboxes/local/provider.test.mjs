@@ -2,7 +2,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { writeFile, mkdir } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { removeDir, git } from '../../helpers/index.mjs';
 import { setup } from '../../helpers/sandbox.mjs';
@@ -99,3 +99,95 @@ describe('AC1: the contract suite passes for local', () => {
   });
 });
 
+
+describe('the builder in a local tree', () => {
+  const waitFor = async (fn) => {
+    for (let i = 0; i < 250 && !(await fn()); i++) await new Promise((r) => setTimeout(r, 20));
+  };
+
+  test('headless: brief starts claude in the tree, and status follows the process', async () => {
+    const env = await setup({ env: { PADAKAN_DRIVER: 'headless', PADAKAN_TREE_MODEL: 'claude-sonnet-5-5' } });
+    const log = join(env.base, 'claude.log');
+    process.env.PADAKAN_STUB_LOG = log;
+    process.env.PADAKAN_STUB_SLEEP = '1';
+    try {
+      const gw = openGateway(env.ctx);
+      const h = await gw.create('pad-1', { task: 'PAD-1' });
+      const briefFile = join(env.base, 'brief.md');
+      await writeFile(briefFile, '---\ntype: Brief\n---\n# Do it\n');
+      const r = await gw.brief('pad-1', briefFile);
+      assert.equal(r.agent, 'running');
+      assert.equal((await gw.status('pad-1')).agent, 'running');
+      assert.equal((await gw.status('pad-1')).state, 'working');
+      await waitFor(() => existsSync(join(h.path, '.padakan', 'agent.exit')) && readFileSync(join(h.path, '.padakan', 'agent.exit'), 'utf8').trim() !== '');
+      const done = await gw.status('pad-1');
+      assert.deepEqual([done.state, done.agent], ['waiting', 'exited:0']);
+      const line = readFileSync(log, 'utf8');
+      assert.match(line, /claude -p Read \.padakan\/BRIEF\.md.* --dangerously-skip-permissions --settings .*claude-settings\.json/);
+      const settings = JSON.parse(readFileSync(join(h.path, '.padakan', 'claude-settings.json'), 'utf8'));
+      assert.equal(settings.includeCoAuthoredBy, false);
+      assert.equal(settings.model, 'claude-sonnet-5-5');
+      assert.equal(git(h.path, 'status', '--porcelain'), '', 'the agent files stay out of git');
+    } finally {
+      delete process.env.PADAKAN_STUB_LOG;
+      delete process.env.PADAKAN_STUB_SLEEP;
+      await removeDir(env.base);
+    }
+  });
+
+  test('a builder that fails leaves the tree failed; a briefed tree with nothing running is waiting', async () => {
+    const env = await setup({ env: { PADAKAN_DRIVER: 'headless' } });
+    process.env.PADAKAN_STUB_EXIT = '3';
+    try {
+      const gw = openGateway(env.ctx);
+      const h = await gw.create('pad-1', {});
+      await writeFile(join(env.base, 'b.md'), '# b\n');
+      await gw.brief('pad-1', join(env.base, 'b.md'));
+      await waitFor(() => existsSync(join(h.path, '.padakan', 'agent.exit')) && readFileSync(join(h.path, '.padakan', 'agent.exit'), 'utf8').trim() !== '');
+      assert.deepEqual([(await gw.status('pad-1')).state, (await gw.status('pad-1')).agent], ['failed', 'exited:3']);
+
+      const h2 = await gw.create('pad-2', {});
+      await writeFile(join(h2.path, '.padakan', 'BRIEF.md'), '# b\n');
+      await gw.call('status', 'pad-2');
+      const fake = { ...h2, state: 'working' };
+      assert.deepEqual(await local.status(env.ctx, fake), { state: 'waiting', agent: 'none', handle: { state: 'waiting' } });
+    } finally {
+      delete process.env.PADAKAN_STUB_EXIT;
+      await removeDir(env.base);
+    }
+  });
+
+  test('herdr: attach starts the server, workspace and agent; brief prompts it', async () => {
+    const env = await setup({ env: { PADAKAN_DRIVER: 'herdr' } });
+    const log = join(env.base, 'herdr.log');
+    process.env.PADAKAN_STUB_LOG = log;
+    try {
+      const gw = openGateway(env.ctx);
+      const h = await gw.create('pad-1', {});
+      const a = await gw.attach('pad-1');
+      assert.equal(a.session, 'padakan-pad-1');
+      const text = readFileSync(log, 'utf8');
+      assert.match(text, /herdr --session padakan-pad-1 server/);
+      assert.match(text, new RegExp(`workspace create --cwd ${h.path.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}`));
+      assert.match(text, /agent start padakan-pad-1 --kind claude .* -- --dangerously-skip-permissions --settings/);
+      await writeFile(join(env.base, 'b.md'), '# b\n');
+      assert.equal((await gw.brief('pad-1', join(env.base, 'b.md'))).agent, 'running');
+      assert.match(readFileSync(log, 'utf8'), /agent prompt padakan-pad-1 Read \.padakan\/BRIEF\.md/);
+    } finally {
+      delete process.env.PADAKAN_STUB_LOG;
+      await removeDir(env.base);
+    }
+  });
+
+  test('create refuses a relative remote URL and says how to fix it', async () => {
+    const env = await setup();
+    try {
+      git(env.repo, 'remote', 'set-url', 'origin', '../remote.git');
+      const gw = openGateway(env.ctx);
+      await assert.rejects(gw.create('pad-1', {}), (e) => e.code === 'RELATIVE_REMOTE' && /git remote set-url origin \//.test(e.message));
+      assert.equal(existsSync(join(env.records, 'sandboxes', 'pad-1.json')), false);
+    } finally {
+      await removeDir(env.base);
+    }
+  });
+});

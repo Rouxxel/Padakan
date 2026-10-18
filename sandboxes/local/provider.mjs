@@ -4,10 +4,10 @@
 // Worktrees live next to the records folder, in <records>-trees/<id>, so they never sit inside the
 // OKF bundle. Padakan's files inside a tree go under .padakan/, which is excluded from git.
 
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
-import { mkdir, cp, readdir, readFile, appendFile, stat } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { mkdir, cp, readdir, readFile, writeFile, appendFile, stat, open, rm } from 'node:fs/promises';
+import { existsSync, readFileSync } from 'node:fs';
 import { join, basename, resolve, relative, isAbsolute, sep } from 'node:path';
 import { SandboxError, SECRET_FILE_RE } from '../contract.mjs';
 
@@ -43,6 +43,14 @@ export async function create(ctx, id, { repo = ctx.repo, branch = `padakan/${id}
   if (!baseSha) throw new SandboxError(`base "${base}" is not a commit in ${repo}`, { code: 'BAD_BASE' });
   // With a remote, the base must already be pushed, so the work can always be recovered from it.
   const remotes = await git(repo, 'remote');
+  // A relative remote URL resolves against the current directory, which inside a worktree is a
+  // different folder, so pushes from the tree would fail.
+  for (const r of remotes.split('\n').filter(Boolean)) {
+    const u = await gitTry(repo, 'remote', 'get-url', r);
+    if (u && /^\.\.?[\\/]/.test(u)) {
+      throw new SandboxError(`remote "${r}" is a relative path (${u}); trees live in another folder, so make it absolute: git remote set-url ${r} ${resolve(repo, u)}`, { code: 'RELATIVE_REMOTE' });
+    }
+  }
   if (remotes) {
     const onRemote = await git(repo, 'branch', '-r', '--contains', baseSha);
     if (!onRemote) throw new SandboxError(`base ${baseSha.slice(0, 12)} is not on any remote; push it first`, { code: 'UNPUSHED_BASE' });
@@ -101,25 +109,127 @@ async function walk(dir) {
   return out;
 }
 
-// brief(ctx, handle, briefPath): deliver the OKF brief to .padakan/BRIEF.md.
-export async function brief(ctx, handle, briefPath) {
-  await cp(briefPath, join(handle.path, PADAKAN_DIR, 'BRIEF.md'));
-  return { ok: true, handle: { state: 'working' } };
+// ── the builder: claude in the worktree, headless or in a herdr pane ───────────────────────────
+
+const PROMPT = 'Read .padakan/BRIEF.md and do the task it describes. End with the report line it asks for.';
+const driver = (ctx) => ctx.settings?.PADAKAN_DRIVER || 'herdr';
+const q = (v) => `'${String(v).replace(/'/g, `'\\''`)}'`;
+
+function agentEnv(ctx) {
+  const env = { ...process.env, PADAKAN_PROMPT: PROMPT };
+  if (ctx.settings?.CLAUDE_CODE_OAUTH_TOKEN) env.CLAUDE_CODE_OAUTH_TOKEN = ctx.settings.CLAUDE_CODE_OAUTH_TOKEN;
+  return env;
 }
 
-// attach: the agent runs in a herdr pane in the worktree; the orchestrator's attach step starts it.
+// Tree settings for claude: the tree model, no attribution lines.
+async function claudeSettings(ctx, handle) {
+  const file = join(handle.path, PADAKAN_DIR, 'claude-settings.json');
+  const settings = { includeCoAuthoredBy: false, attribution: { commit: '', pr: '' }, ...(ctx.settings?.PADAKAN_TREE_MODEL ? { model: ctx.settings.PADAKAN_TREE_MODEL } : {}) };
+  await writeFile(file, `${JSON.stringify(settings, null, 2)}\n`);
+  return file;
+}
+
+// Headless: `claude -p` detached in the worktree. Its pid goes to agent.pid, its exit code to agent.exit.
+async function startHeadless(ctx, handle) {
+  const dir = join(handle.path, PADAKAN_DIR);
+  const settingsFile = await claudeSettings(ctx, handle);
+  const log = await open(join(dir, 'agent.log'), 'a');
+  const script = `claude -p "$PADAKAN_PROMPT" --dangerously-skip-permissions --settings ${q(settingsFile)}; echo $? > ${q(join(dir, 'agent.exit'))}`;
+  await rm(join(dir, 'agent.exit'), { force: true });
+  const child = spawn('/bin/sh', ['-c', script], { cwd: handle.path, env: agentEnv(ctx), detached: true, stdio: ['ignore', log.fd, log.fd] });
+  child.unref();
+  await log.close();
+  await writeFile(join(dir, 'agent.pid'), `${child.pid}\n`);
+  return child.pid;
+}
+
+export function herdrNames(ctx, handle) {
+  const session = `${ctx.settings?.HERDR_SESSION_PREFIX || 'padakan'}-${handle.id}`;
+  return { session, agent: session.slice(0, 32) }; // herdr caps agent names at 32 characters
+}
+
+const sh = (ctx, cwd, script, timeout = 420_000) => run('/bin/sh', ['-c', script], { cwd, env: agentEnv(ctx), timeout, maxBuffer: 16 * 1024 * 1024 });
+
+// brief(ctx, handle, briefPath): deliver the OKF brief to .padakan/BRIEF.md, then start the builder
+// (headless) or prompt the herdr agent that attach started.
+export async function brief(ctx, handle, briefPath) {
+  await cp(briefPath, join(handle.path, PADAKAN_DIR, 'BRIEF.md'));
+  if (driver(ctx) === 'headless') {
+    const pid = await startHeadless(ctx, handle);
+    return { ok: true, agent: 'running', pid, handle: { state: 'working' } };
+  }
+  const { session, agent } = herdrNames(ctx, handle);
+  try {
+    await sh(ctx, handle.path, `herdr --session ${q(session)} agent prompt ${q(agent)} "$PADAKAN_PROMPT"`, 60_000);
+  } catch {
+    // no herdr agent yet: attach starts it and the brief is already in place for it
+    return { ok: true, agent: 'none', note: 'run attach to start the herdr agent', handle: { state: 'working' } };
+  }
+  return { ok: true, agent: 'running', handle: { state: 'working' } };
+}
+
+// attach(ctx, handle): headless returns the log to follow. herdr starts a server for the tree's
+// session, the workspace and a claude agent in it, and clears the folder-trust prompt (whose default
+// is "No, exit").
 export async function attach(ctx, handle) {
-  return { watch: ctx.settings?.PADAKAN_TERMINAL === 'none' ? 'none' : 'herdr', cwd: handle.path };
+  if (driver(ctx) === 'headless') return { watch: 'log', cwd: handle.path, command: `tail -f ${join(handle.path, PADAKAN_DIR, 'agent.log')}` };
+  const { session, agent } = herdrNames(ctx, handle);
+  const S = q(session);
+  const settingsFile = await claudeSettings(ctx, handle);
+  await sh(ctx, handle.path, [
+    `pgrep -f "[h]erdr --session ${session} server" >/dev/null || (nohup herdr --session ${S} server > ${q(join(handle.path, PADAKAN_DIR, 'herdr-server.log'))} 2>&1 &)`,
+    'sleep 2',
+    `herdr --session ${S} pane list 2>/dev/null | grep -q pane_id || herdr --session ${S} workspace create --cwd ${q(handle.path)} --label ${S} --focus >/dev/null 2>&1`,
+    `herdr --session ${S} agent list 2>/dev/null | grep -q '"agent_status"' || herdr --session ${S} agent start ${q(agent)} --kind claude --pane w1:p1 --timeout 240000 -- --dangerously-skip-permissions --settings ${q(settingsFile)} 2>&1 | head -3`,
+    'for _ in 1 2 3; do',
+    `  screen=$(herdr --session ${S} pane read w1:p1 --source visible --lines 12 2>/dev/null)`,
+    '  printf %s "$screen" | grep -q "trust this folder" || break',
+    `  printf %s "$screen" | grep -qE '❯ *No, exit' && herdr --session ${S} pane send-keys w1:p1 down && sleep 1`,
+    `  herdr --session ${S} pane send-keys w1:p1 enter; sleep 5`,
+    'done',
+    'true',
+  ].join('\n'));
+  if (existsSync(join(handle.path, PADAKAN_DIR, 'BRIEF.md'))) {
+    await sh(ctx, handle.path, `herdr --session ${S} agent prompt ${q(agent)} "$PADAKAN_PROMPT"`, 60_000).catch(() => {});
+  }
+  return { watch: 'herdr', cwd: handle.path, session, command: `herdr --session ${session}` };
 }
 
 export async function url(ctx, handle, port = 3000) {
   return { url: `http://localhost:${port}` };
 }
 
+// The builder's process: running, exited:<code>, or none (nothing was started, or herdr drives it).
+export function agentState(handle) {
+  const dir = join(handle.path, PADAKAN_DIR);
+  const exitFile = join(dir, 'agent.exit');
+  if (existsSync(exitFile)) {
+    const code = readFileSync(exitFile, 'utf8').trim();
+    if (code !== '') return `exited:${code}`;
+  }
+  const pidFile = join(dir, 'agent.pid');
+  if (existsSync(pidFile)) {
+    const pid = Number(readFileSync(pidFile, 'utf8').trim());
+    try {
+      process.kill(pid, 0);
+      return 'running';
+    } catch {
+      return 'exited:unknown'; // gone without writing its exit code (killed, or the machine restarted)
+    }
+  }
+  return 'none';
+}
+
 export async function status(ctx, handle) {
   if (!existsSync(handle.path)) return { state: 'gone', handle: { state: 'gone' } };
   if (existsSync(join(handle.path, PADAKAN_DIR, 'DONE'))) return { state: 'done', handle: { state: 'done' } };
-  return { state: handle.state === 'provisioning' ? 'ready' : handle.state };
+  const agent = agentState(handle);
+  let state = handle.state === 'provisioning' ? 'ready' : handle.state;
+  if (agent === 'running') state = 'working';
+  else if (agent === 'exited:0') state = 'waiting';
+  else if (agent.startsWith('exited:')) state = 'failed';
+  else if (state === 'working' && driver(ctx) === 'headless') state = 'waiting'; // briefed, but nothing runs
+  return { state, agent, ...(state !== handle.state ? { handle: { state } } : {}) };
 }
 
 // evidence(ctx, handle, key): copy .padakan/evidence/ into <records>/tasks/<key>/evidence/local/.

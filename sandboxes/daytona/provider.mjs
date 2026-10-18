@@ -374,7 +374,7 @@ export async function attach(ctx, handle) {
   const { session, agent } = herdrNames(ctx, handle);
   const S = q(session);
   await must(ctx, handle.id, [
-    `pgrep -f "herdr --session ${session} server" >/dev/null || (set -a; . "$HOME/.claude-env"; set +a; nohup herdr --session ${S} server > "$HOME/${PADAKAN_DIR}/herdr-server.log" 2>&1 &)`,
+    `pgrep -f "[h]erdr --session ${session} server" >/dev/null || (set -a; . "$HOME/.claude-env"; set +a; nohup herdr --session ${S} server > "$HOME/${PADAKAN_DIR}/herdr-server.log" 2>&1 &)`,
     'sleep 3',
     `herdr --session ${S} pane list 2>/dev/null | grep -q pane_id || herdr --session ${S} workspace create --cwd ${rpath(handle.path)} --label ${S} --focus >/dev/null 2>&1`,
     `herdr --session ${S} agent list 2>/dev/null | grep -q '"agent_status"' || herdr --session ${S} agent start ${q(agent)} --kind claude --pane w1:p1 --timeout 240000 -- --dangerously-skip-permissions 2>&1 | head -3`,
