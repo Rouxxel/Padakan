@@ -15,6 +15,7 @@ import { validateFile, validateBundle } from '../core/okf.mjs';
 import { inspect } from '../core/diffcheck.mjs';
 import { verdict, resultLine } from '../core/gates.mjs';
 import { readChecks } from '../core/checks.mjs';
+import { projectProfile } from '../core/profile.mjs';
 import { resolve as resolveManifest, resultLine as manifestLine } from '../core/resolver.mjs';
 import { collect } from '../core/collect-logs.mjs';
 import { triage } from '../core/triage.mjs';
@@ -67,7 +68,10 @@ export async function resolve(ctx, args) {
   const task = await getTask(ctx.records, key);
   const prdFile = join(ctx.records, 'plan', 'prd.md');
   const prd = existsSync(prdFile) ? await readFile(prdFile, 'utf8') : '';
-  const { manifest, usage } = await resolveManifest({ task: { key, ...task }, prd, settings: ctx.settings, client: ctx.models(), now: ctx.now });
+  // Facts about the project decide which tools a task gets (no docker tools without Docker, no browser without a UI).
+  const project = ctx.repo ? await projectProfile(ctx.repo) : null;
+  if (project) await writeFile(join(ctx.records, 'plan', 'profile.json'), `${JSON.stringify(project, null, 2)}\n`).catch(() => {});
+  const { manifest, usage } = await resolveManifest({ task: { key, ...task }, prd, project, settings: ctx.settings, client: ctx.models(), now: ctx.now });
   const dir = await taskDir(ctx.records, key);
   await writeFile(join(dir, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
   await updateTask(ctx.records, key, { target: manifest.target, platform: manifest.platform }, ctx.now);

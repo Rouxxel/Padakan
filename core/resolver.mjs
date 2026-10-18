@@ -26,6 +26,13 @@ export function availableSkills(dir = join(PLUGIN, 'skills')) {
   return readdirSync(dir, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name).sort();
 }
 
+// Every MCP server and CLI any target's verify kit can carry (the candidates the model filters).
+export function kitTools(registry = REGISTRY) {
+  const mcp = [...new Set(Object.values(registry.targets).flatMap((t) => t.mcp))];
+  const cli = [...new Set(Object.values(registry.targets).flatMap((t) => t.cli))];
+  return { mcp, cli };
+}
+
 // What the model must answer.
 export function proposalSchema(registry = REGISTRY) {
   return {
@@ -35,6 +42,8 @@ export function proposalSchema(registry = REGISTRY) {
     properties: {
       target: { type: 'string', enum: Object.keys(registry.targets) },
       extra_skills: { type: 'array', items: { type: 'string', enum: registry.optional_skills } },
+      mcp: { type: 'array', items: { type: 'string', enum: kitTools(registry).mcp } },
+      cli: { type: 'array', items: { type: 'string', enum: kitTools(registry).cli } },
       allow_dependencies: { type: 'array', items: { type: 'string' } },
       estimates: {
         type: 'array',
@@ -56,16 +65,17 @@ export function proposalSchema(registry = REGISTRY) {
   };
 }
 
-export function buildPrompt({ task, prd, settings, registry = REGISTRY }) {
+export function buildPrompt({ task, prd, settings, project = null, registry = REGISTRY }) {
   const system = [
     'You are the capability resolver of Padakan, an autonomous development system.',
     'For one task you choose: the target (web, ios, android or backend), extra skills from the optional list,',
     'dependency files the task legitimately needs to change (usually none), and cost estimates per step as ranges.',
     `Estimate the build step in "${settings.PADAKAN_SANDBOX_PROVIDER === 'devin' ? 'acu' : 'tokens'}" units; CI in "ci_minute"; device probes in "device_minute".`,
     'Be conservative: allow a dependency file only when the task cannot be done without changing it.',
-    `Registry: ${JSON.stringify({ targets: Object.keys(registry.targets), optional_skills: registry.optional_skills, steps: Object.keys(registry.steps) })}`,
+    "From the chosen target's verify kit, keep in mcp and cli only the tools this project and task need (no docker tools without a Docker setup, no browser tools without a UI).",
+    `Registry: ${JSON.stringify({ targets: Object.fromEntries(Object.entries(registry.targets).map(([k, t]) => [k, { mcp: t.mcp, cli: t.cli }])), tools: registry.tools, optional_skills: registry.optional_skills, steps: Object.keys(registry.steps) })}`,
   ].join(' ');
-  const user = [`Task ${task.key}: ${task.title || ''}`, task.description || '', task.criteria ? `Acceptance criteria:\n${task.criteria}` : '', prd ? `PRD (tech stack and architecture):\n${prd.slice(0, 6000)}` : '']
+  const user = [`Task ${task.key}: ${task.title || ''}`, task.description || '', task.criteria ? `Acceptance criteria:\n${task.criteria}` : '', project ? `Project profile (facts from the repository):\n${JSON.stringify(project)}` : '', prd ? `PRD (tech stack and architecture):\n${prd.slice(0, 6000)}` : '']
     .filter(Boolean)
     .join('\n\n');
   return { system, user };
@@ -98,7 +108,12 @@ export function buildManifest({ task, proposal, settings, registry = REGISTRY, s
     task: task.key,
     target: proposal.target,
     platform,
-    verify_kit: { mcp: [...kit.mcp], cli: [...registry.always.cli, ...kit.cli] },
+    // The model may only narrow the target's kit, never add to it; without an answer the full kit applies.
+    // The target's `keep` tools always stay: a change must be provable on its own surface.
+    verify_kit: {
+      mcp: Array.isArray(proposal.mcp) ? kit.mcp.filter((t) => proposal.mcp.includes(t) || (kit.keep || []).includes(t)) : [...kit.mcp],
+      cli: [...registry.always.cli, ...(Array.isArray(proposal.cli) ? kit.cli.filter((t) => proposal.cli.includes(t) || (kit.keep || []).includes(t)) : kit.cli)],
+    },
     skills,
     allowDependencies: [...new Set(proposal.allow_dependencies)].sort(),
     estimates: estimates.sort((a, b) => a.step.localeCompare(b.step)),
@@ -111,12 +126,12 @@ export function buildManifest({ task, proposal, settings, registry = REGISTRY, s
   return manifest;
 }
 
-export async function resolve({ task, prd = '', settings, client, registry = REGISTRY, skillsAvailable, now }) {
+export async function resolve({ task, prd = '', project = null, settings, client, registry = REGISTRY, skillsAvailable, now }) {
   if (client.kind === 'systemone') {
-    const { proposal, usage, model } = await systemOneProposal({ task, prd, settings, client, registry });
+    const { proposal, usage, model } = await systemOneProposal({ task, prd, project, settings, client, registry });
     return { manifest: buildManifest({ task, proposal, settings, registry, skillsAvailable, model, now }), usage };
   }
-  const { system, user } = buildPrompt({ task, prd, settings, registry });
+  const { system, user } = buildPrompt({ task, prd, settings, project, registry });
   const model = settings.PADAKAN_RESOLVER_MODEL;
   const { data, usage } = await client.chatJson({ model, system, user, schema: proposalSchema(registry), name: 'capability_manifest' });
   const manifest = buildManifest({ task, proposal: data, settings, registry, skillsAvailable, model, now });
@@ -180,6 +195,9 @@ export function systemOneQuestions({ settings, registry = REGISTRY }) {
       criteria: Object.fromEntries(Object.keys(registry.targets).map((t) => [t, TARGET_MEANING[t] || null])),
     },
   };
+  const { mcp, cli } = kitTools(registry);
+  for (const t of mcp) questions[`mcp:${t}`] = { type: 'noul', instructions: `Given \`project\` and \`task\`, is this tool needed to build or verify the change? ${registry.tools?.mcp?.[t] || t}` };
+  for (const t of cli) questions[`cli:${t}`] = { type: 'noul', instructions: `Given \`project\` and \`task\`, is this tool needed to build or verify the change? ${registry.tools?.cli?.[t] || t}` };
   for (const skill of registry.optional_skills) {
     if (skill === 'entire-context') continue; // added by buildManifest when ENTIRE_ENABLED, never chosen
     questions[`skill:${skill}`] = { type: 'noul', instructions: SKILL_QUESTION[skill] || `Does this task need the ${skill} skill?` };
@@ -196,9 +214,10 @@ export function systemOneQuestions({ settings, registry = REGISTRY }) {
   return questions;
 }
 
-export async function systemOneProposal({ task, prd = '', settings, client, registry = REGISTRY }) {
+export async function systemOneProposal({ task, prd = '', project = null, settings, client, registry = REGISTRY }) {
   const state = {
     task: { key: task.key, title: task.title || '', description: task.description || '', acceptance_criteria: task.criteria || '' },
+    project: project || {},
     prd: prd.slice(0, 12_000),
   };
   const { answers, usage, model } = await client.systemOne({ state, questions: systemOneQuestions({ settings, registry }) });
@@ -215,7 +234,10 @@ export async function systemOneProposal({ task, prd = '', settings, client, regi
     `optional steps ${steps.filter((s) => !registry.steps[s].required).join(', ') || 'none'}`,
     'no dependency changes allowed (a System One model cannot name files)',
   ].join('; ');
-  return { proposal: { target: t.choice, extra_skills: extra, allow_dependencies: [], estimates, rationale }, usage, model };
+  const tools = kitTools(registry);
+  const mcp = tools.mcp.filter((x) => answers[`mcp:${x}`]?.noul >= 0.5);
+  const cli = tools.cli.filter((x) => answers[`cli:${x}`]?.noul >= 0.5);
+  return { proposal: { target: t.choice, extra_skills: extra, mcp, cli, allow_dependencies: [], estimates, rationale: `${rationale}; tools ${[...mcp, ...cli].join(', ') || 'git and gh only'}` }, usage, model };
 }
 
 // One line for the orchestrator.

@@ -1,45 +1,141 @@
 {
-  "$comment": "The capability registry: everything an agent can be given. The capability resolver chooses from this list; it cannot add anything that is not here. Catalog data, not settings.",
+  "$comment": "The capability registry: everything an agent can be given. The capability resolver chooses from this list; it cannot add anything that is not here. Catalog data, not settings. Each target's `keep` tools are always in its verify kit (the change must be provable on its surface); the resolver may drop only the others.",
   "targets": {
     "web": {
       "platform": "linux",
-      "mcp": ["playwright", "chrome-devtools"],
-      "cli": ["npm", "npx playwright", "lighthouse"],
-      "skills": ["verify-web", "e2e-playbook"]
+      "mcp": [
+        "playwright",
+        "chrome-devtools"
+      ],
+      "cli": [
+        "npm",
+        "npx playwright",
+        "lighthouse"
+      ],
+      "skills": [
+        "verify-web",
+        "e2e-playbook"
+      ],
+      "keep": [
+        "playwright"
+      ]
     },
     "ios": {
       "platform": "macos",
-      "mcp": ["mobilebuild"],
-      "cli": ["xcodebuild", "xcrun simctl"],
-      "skills": ["verify-ios"]
+      "mcp": [
+        "mobilebuild"
+      ],
+      "cli": [
+        "xcodebuild",
+        "xcrun simctl"
+      ],
+      "skills": [
+        "verify-ios"
+      ],
+      "keep": [
+        "mobilebuild"
+      ]
     },
     "android": {
       "platform": "linux",
-      "mcp": ["androidbuild"],
-      "cli": ["adb", "./gradlew", "emulator"],
-      "skills": ["verify-android"]
+      "mcp": [
+        "androidbuild"
+      ],
+      "cli": [
+        "adb",
+        "./gradlew",
+        "emulator"
+      ],
+      "skills": [
+        "verify-android"
+      ],
+      "keep": [
+        "androidbuild"
+      ]
     },
     "backend": {
       "platform": "linux",
       "mcp": [],
-      "cli": ["curl", "docker compose", "docker logs"],
-      "skills": ["verify-backend"]
+      "cli": [
+        "curl",
+        "docker compose",
+        "docker logs"
+      ],
+      "skills": [
+        "verify-backend"
+      ],
+      "keep": [
+        "curl"
+      ]
     }
   },
   "always": {
-    "skills": ["okf", "no-questions", "escalation", "evidence-pack"],
-    "cli": ["git", "gh"]
+    "skills": [
+      "okf",
+      "no-questions",
+      "escalation",
+      "evidence-pack"
+    ],
+    "cli": [
+      "git",
+      "gh"
+    ]
   },
-  "optional_skills": ["entire-context", "feature-docs", "triage-categories", "cost-gate"],
+  "optional_skills": [
+    "entire-context",
+    "feature-docs",
+    "triage-categories",
+    "cost-gate"
+  ],
   "steps": {
-    "build": { "required": true },
-    "task-tests": { "required": true },
-    "suite": { "required": true },
-    "diffcheck": { "required": true },
-    "acceptance": { "required": true },
-    "video": { "required": false },
-    "device-probe": { "required": false },
-    "browser-matrix": { "required": false },
-    "e2e-staging": { "required": false }
+    "build": {
+      "required": true
+    },
+    "task-tests": {
+      "required": true
+    },
+    "suite": {
+      "required": true
+    },
+    "diffcheck": {
+      "required": true
+    },
+    "acceptance": {
+      "required": true
+    },
+    "video": {
+      "required": false
+    },
+    "device-probe": {
+      "required": false
+    },
+    "browser-matrix": {
+      "required": false
+    },
+    "e2e-staging": {
+      "required": false
+    }
+  },
+  "tools": {
+    "$comment": "What each verify-kit tool is for. The resolver keeps a target's tool only when the project and the task need it.",
+    "mcp": {
+      "playwright": "Playwright MCP: drive a real browser, click through pages, record video and traces",
+      "chrome-devtools": "Chrome DevTools MCP: browser console, network requests and performance profiles",
+      "mobilebuild": "MobileBuildMCP: build and run an iOS app on the simulator",
+      "androidbuild": "AndroidBuildMCP: build and run an Android app on the emulator"
+    },
+    "cli": {
+      "npm": "npm: install packages and run the project's scripts",
+      "npx playwright": "Playwright CLI: run end-to-end browser specs",
+      "lighthouse": "Lighthouse: web performance and accessibility audits",
+      "xcodebuild": "xcodebuild: build and test an Xcode project",
+      "xcrun simctl": "simctl: control iOS simulators (install, launch, record)",
+      "adb": "adb: control an Android device or emulator",
+      "./gradlew": "Gradle wrapper: build and test an Android project",
+      "emulator": "Android emulator",
+      "curl": "curl: call HTTP endpoints and check responses",
+      "docker compose": "docker compose: start the project's services from a compose file",
+      "docker logs": "docker logs: read a running container's logs"
+    }
   }
 }
