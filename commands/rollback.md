@@ -9,5 +9,5 @@ allowed-tools: Bash, Read
 The human's right to undo at any time.
 
 1. Find the task's deploy record in `<records>/tasks/<KEY>/deploy.json`.
-2. Roll back through the deploy adapter (`core/deploy.mjs`, issue #19): turn the flag off and restore the previous release.
-3. Append the rollback to the audit trail and escalate the task with the reason.
+2. Run `${CLAUDE_PLUGIN_ROOT}/bin/padakan rollback <KEY>`: the deploy adapter (`core/deploy.mjs`) turns the flag off and restores the previous release; the task is escalated and the rollback is audited.
+3. Show its result line.

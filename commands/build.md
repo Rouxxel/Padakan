@@ -15,7 +15,7 @@ Unattended. Never ask the human; decide by rule or escalate.
 5. **Prove:** dispatch **test-runner** (writes `checks/tests.json` and `suite.json`), **acceptance-tester** (`checks/acceptance.json`), and **security-auditor** when the change touches auth, data scoping, secrets or input handling.
 6. **Evidence:** `${CLAUDE_PLUGIN_ROOT}/bin/padakan evidence <KEY>`, then dispatch **evidence-builder** (`checks/evidence.json` and the evidence report).
 7. **Decide:** dispatch **verifier**, which runs `${CLAUDE_PLUGIN_ROOT}/bin/padakan verify <KEY>`.
-   - `SHIP`: `${CLAUDE_PLUGIN_ROOT}/bin/padakan merge <KEY>`, then the gated deploy.
+   - `SHIP`: `${CLAUDE_PLUGIN_ROOT}/bin/padakan merge <KEY>`, then `${CLAUDE_PLUGIN_ROOT}/bin/padakan deploy <KEY>` (flag, canary, automatic rollback).
    - `HUMAN_MERGE`: leave the PR for a human; do not merge.
    - `ESCALATE`: escalate with the verify report.
 8. **Retire:** dispatch **tree-operator** to run `${CLAUDE_PLUGIN_ROOT}/bin/padakan retire <KEY>`.

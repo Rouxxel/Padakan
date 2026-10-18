@@ -18,6 +18,7 @@ import { resolve as resolveManifest, resultLine as manifestLine } from '../core/
 import { collect } from '../core/collect-logs.mjs';
 import { triage } from '../core/triage.mjs';
 import { buildPack, renderMarkdown, renderHtml, ITEMS } from '../core/report.mjs';
+import { adapterFor, gatedDeploy } from '../core/deploy.mjs';
 
 const ok = (line, details) => ({ line, code: 0, details });
 const fail = (line, details) => ({ line, code: 1, details });
@@ -214,6 +215,38 @@ export async function merge(ctx, args) {
   return ok(`MERGED=yes PR=${pr.url} HEAD=${v.head.slice(0, 12)}`);
 }
 
+// ── deploy <KEY>: behind a flag, then a canary; rolls back by itself when the SLO slips ─────────
+export async function deploy(ctx, args) {
+  const key = assertKey(args[0]);
+  const task = await getTask(ctx.records, key);
+  if (task.status !== 'merged') return fail(`DEPLOY=no REASON="task is ${task.status}; only a merged change is deployed"`);
+  const adapter = ctx.deployAdapter || adapterFor(ctx.settings, { records: ctx.records });
+  const release = { task: key, head: task.merged_head };
+  const r = await gatedDeploy({ adapter, release, settings: ctx.settings, ...(ctx.deployOptions || {}) });
+  const dir = await taskDir(ctx.records, key);
+  await writeFile(join(dir, 'deploy.json'), `${JSON.stringify({ target: adapter.name, release, ...r, at: ctx.now() }, null, 2)}\n`);
+  const last = r.windows.at(-1)?.error_rate ?? 'none';
+  if (r.outcome === 'rolled-back') {
+    await updateTask(ctx.records, key, { status: 'escalated', deploy: 'rolled-back', escalation: r.reason }, ctx.now);
+    await ctx.audit.append({ type: 'deploy.rollback', task: key, head: release.head, target: adapter.name, reason: r.reason, summary: `deploy rolled back: ${r.reason}` });
+    return fail(`DEPLOY=rolled-back TARGET=${adapter.name} CANARY=${r.percent}% ERROR_RATE=${last} ESCALATED=yes`);
+  }
+  await updateTask(ctx.records, key, { status: 'done', deploy: 'promoted' }, ctx.now);
+  await ctx.audit.append({ type: 'deploy.promote', task: key, head: release.head, target: adapter.name, summary: `deployed ${release.head ? release.head.slice(0, 12) : ''} to everyone` });
+  return ok(`DEPLOY=promoted TARGET=${adapter.name} CANARY=${r.percent}% ERROR_RATE=${last}`);
+}
+
+// ── rollback <KEY>: the human's right to undo at any time ───────────────────────────────────────
+export async function rollback(ctx, args) {
+  const key = assertKey(args[0]);
+  const task = await getTask(ctx.records, key);
+  const adapter = ctx.deployAdapter || adapterFor(ctx.settings, { records: ctx.records });
+  await adapter.rollback({ task: key, head: task.merged_head }, 'rolled back by a human');
+  await updateTask(ctx.records, key, { status: 'escalated', deploy: 'rolled-back', escalation: 'rolled back by a human' }, ctx.now);
+  await ctx.audit.append({ type: 'deploy.rollback', task: key, by: 'human', summary: 'rolled back by a human' });
+  return ok(`ROLLBACK=done TARGET=${adapter.name}`);
+}
+
 // ── retire <KEY>: pull the record, end the tree ─────────────────────────────────────────────────
 export async function retire(ctx, args) {
   const key = assertKey(args[0]);
@@ -353,4 +386,4 @@ export async function ls(ctx) {
   return ok(`TREES=${handles.length}`, handles.map((h) => `${h.id}\t${h.provider}\t${h.state}\t${h.task || '-'}\t${h.url || h.path || '-'}`));
 }
 
-export const STEPS = { init, gate, pause, resolve, tick, plant, attach, brief, poll, verify, evidence, merge, retire, recycle, status, ls };
+export const STEPS = { init, gate, pause, resolve, tick, deploy, rollback, plant, attach, brief, poll, verify, evidence, merge, retire, recycle, status, ls };
