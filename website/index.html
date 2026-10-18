@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Padakan · Autonomous development you can trust</title>
+<meta name="description" content="Padakan is a Claude Code plugin: agents plan, build, verify and ship in sandboxes, and a change reaches production only when the system has proven it safe.">
+<meta property="og:title" content="Padakan · Autonomous development you can trust">
+<meta property="og:description" content="Plan once. Agents build, verify and ship on their own, behind deterministic gates, evidence and a signed audit trail.">
+<meta property="og:type" content="website">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#ffffff; --bg-soft:#fafaf9; --surface:#ffffff; --text:#0c0c0d; --muted:#5f6168; --faint:#8b8d94; --line:#ebebea;
+  --accent:#ff5a1f; --accent-ink:#ffffff; --accent-soft:rgba(255,90,31,.10);
+  --code-bg:#0f0f11; --code-text:#e8e8ea; --code-dim:#7d808a;
+  --diagram-bg:#ffffff;
+  --shadow:0 1px 2px rgba(0,0,0,.04), 0 12px 32px -16px rgba(0,0,0,.12);
+  --sans:"Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --gutter:16px;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0b0b0c; --bg-soft:#111113; --surface:#141416; --text:#f2f2f3; --muted:#a2a4ab; --faint:#74767e; --line:#232327;
+    --accent-soft:rgba(255,90,31,.14);
+    --code-bg:#141416; --code-text:#e8e8ea; --code-dim:#7d808a;
+    --diagram-bg:#f4f4f5;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 12px 32px -16px rgba(0,0,0,.6);
+  }
+}
+@media (min-width:720px){ :root{ --gutter:32px; } }
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 var(--sans);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:inherit}
+img{max-width:100%}
+.wrap{max-width:1080px;margin:0 auto;padding-left:max(var(--gutter),env(safe-area-inset-left));padding-right:max(var(--gutter),env(safe-area-inset-right))}
+.narrow{max-width:760px}
+
+/* nav */
+nav{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:saturate(180%) blur(12px);-webkit-backdrop-filter:saturate(180%) blur(12px);border-bottom:1px solid var(--line)}
+nav .wrap{display:flex;align-items:center;justify-content:space-between;height:60px;gap:16px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;letter-spacing:-.02em;text-decoration:none}
+.brand svg{width:24px;height:24px;flex:none}
+.nav-links{display:flex;align-items:center;gap:28px;font-size:14px;color:var(--muted)}
+.nav-links a{text-decoration:none}
+.nav-links a:hover{color:var(--text)}
+@media (max-width:720px){.nav-links .hide-sm{display:none}}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:44px;padding:0 20px;border-radius:10px;font-weight:600;font-size:15px;text-decoration:none;border:1px solid transparent;transition:background .15s,border-color .15s,transform .15s;white-space:nowrap}
+.btn svg{width:18px;height:18px;flex:none}
+.btn-primary{background:var(--text);color:var(--bg)}
+.btn-primary:hover{transform:translateY(-1px)}
+.btn-accent{background:var(--accent);color:var(--accent-ink)}
+.btn-accent:hover{transform:translateY(-1px)}
+.btn-secondary{background:transparent;color:var(--text);border-color:var(--line)}
+.btn-secondary:hover{border-color:var(--faint)}
+.btn-sm{height:36px;padding:0 14px;font-size:14px;border-radius:8px}
+
+/* hero */
+.hero{padding:96px 0 72px;text-align:center}
+.pill{display:inline-flex;align-items:center;gap:8px;padding:5px 12px 5px 6px;border:1px solid var(--line);border-radius:999px;font-size:13px;color:var(--muted);text-decoration:none;background:var(--bg-soft)}
+.pill b{background:var(--accent-soft);color:var(--accent);font-weight:600;padding:2px 8px;border-radius:999px;font-size:12px}
+.pill:hover{border-color:var(--faint)}
+.hero h1{font-size:clamp(40px,7.2vw,72px);line-height:1.02;letter-spacing:-.045em;font-weight:800;margin:24px auto 20px;max-width:15ch;text-wrap:balance}
+.hero h1 span{color:var(--accent)}
+.hero .sub{font-size:clamp(17px,2.2vw,20px);color:var(--muted);max-width:56ch;margin:0 auto 36px;text-wrap:pretty}
+.cta{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+.install{margin:28px auto 0;display:inline-flex;align-items:center;gap:10px;max-width:100%;padding:10px 16px;border:1px solid var(--line);border-radius:10px;background:var(--bg-soft);font:13.5px/1.4 var(--mono);color:var(--muted);overflow-x:auto}
+.install span{color:var(--accent)}
+.install code{white-space:nowrap;color:var(--text)}
+@media (max-width:560px){.install{align-items:flex-start;text-align:left}.install code{white-space:normal;overflow-wrap:anywhere}}
+
+.facts{margin-top:72px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.facts div{padding:24px 16px;text-align:center}
+.facts div + div{border-left:1px solid var(--line)}
+.facts b{display:block;font-size:30px;font-weight:700;letter-spacing:-.03em}
+.facts span{font-size:13.5px;color:var(--muted)}
+@media (max-width:720px){
+  .facts{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .facts div:nth-child(3){border-left:0}
+  .facts div:nth-child(n+3){border-top:1px solid var(--line)}
+}
+
+/* sections */
+section{padding:96px 0}
+.section-soft{background:var(--bg-soft);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.label{font-size:13px;font-weight:600;color:var(--accent);letter-spacing:.02em}
+h2{font-size:clamp(30px,4.4vw,44px);line-height:1.08;letter-spacing:-.035em;font-weight:700;margin:10px 0 16px;max-width:22ch;text-wrap:balance}
+.lead{font-size:17px;color:var(--muted);max-width:60ch;margin:0 0 48px;text-wrap:pretty}
+.center{text-align:center}
+.center h2,.center .lead{margin-left:auto;margin-right:auto}
+
+/* problem */
+.problem{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center}
+.problem p{color:var(--muted);margin:0}
+.quote{margin:0;padding:28px;border:1px solid var(--line);border-radius:16px;background:var(--surface);font-size:clamp(19px,2.4vw,23px);line-height:1.4;letter-spacing:-.015em;font-weight:500;box-shadow:var(--shadow)}
+.quote::before{content:"";display:block;width:28px;height:3px;border-radius:2px;background:var(--accent);margin-bottom:16px}
+@media (max-width:860px){.problem{grid-template-columns:1fr;gap:32px}}
+
+/* diagram */
+.diagram{background:var(--diagram-bg);border:1px solid var(--line);border-radius:16px;padding:12px;box-shadow:var(--shadow)}
+.diagram img{display:block;width:100%;height:auto;border-radius:8px}
+.diagram-meta{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px 24px;margin-top:16px;font-size:13.5px;color:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:8px 20px}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;vertical-align:0}
+.diagram-meta a{color:var(--text);text-underline-offset:3px}
+
+/* steps */
+.steps{list-style:none;margin:56px 0 0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 48px;counter-reset:step}
+.steps li{display:grid;grid-template-columns:40px 1fr;gap:16px;padding:20px 0;border-top:1px solid var(--line);min-width:0}
+.steps li::before{counter-increment:step;content:counter(step,decimal-leading-zero);font:500 13px/1 var(--mono);color:var(--faint);padding-top:5px}
+.steps h3{font-size:16px;font-weight:600;letter-spacing:-.01em;margin:0 0 4px;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px}
+.steps h3 small{font:500 11.5px/1.6 var(--mono);color:var(--muted);background:var(--bg-soft);border:1px solid var(--line);padding:0 7px;border-radius:6px}
+.steps p{margin:0;font-size:15px;color:var(--muted)}
+.steps li.gate h3 small{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 35%,transparent);background:var(--accent-soft)}
+@media (max-width:760px){.steps{grid-template-columns:1fr}}
+
+/* features */
+.features{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.feature{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:24px;min-width:0}
+.feature .ico{width:36px;height:36px;border-radius:9px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);margin-bottom:18px}
+.feature .ico svg{width:19px;height:19px}
+.feature h3{font-size:16.5px;font-weight:600;letter-spacing:-.015em;margin:0 0 6px}
+.feature p{margin:0;font-size:15px;color:var(--muted)}
+@media (max-width:900px){.features{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:600px){.features{grid-template-columns:1fr}}
+
+/* get started */
+.start{display:grid;grid-template-columns:.85fr 1.15fr;gap:56px;align-items:center}
+.start .lead{margin-bottom:24px}
+@media (max-width:860px){.start{grid-template-columns:1fr;gap:32px}}
+.terminal{background:var(--code-bg);color:var(--code-text);border-radius:14px;border:1px solid var(--line);overflow:hidden;min-width:0;box-shadow:var(--shadow)}
+.terminal .bar{display:flex;gap:6px;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.07)}
+.terminal .bar i{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.14)}
+.terminal pre{margin:0;padding:20px;font:13.5px/1.8 var(--mono);overflow-x:auto}
+.terminal .c{color:var(--code-dim)}
+.terminal .k{color:#ff8a5c}
+
+.stack{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:820px;margin:0 auto}
+.stack span{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 14px;font-size:14px;color:var(--muted)}
+.stack b{color:var(--text);font-weight:600}
+
+/* closing */
+.closing{padding:104px 0}
+.closing .box{border:1px solid var(--line);border-radius:20px;padding:64px 24px;text-align:center;background:radial-gradient(600px 240px at 50% 0%,var(--accent-soft),transparent 70%),var(--bg-soft)}
+.closing h2{margin:12px auto 14px}
+.closing p{color:var(--muted);margin:0 auto 32px;max-width:52ch}
+
+footer{border-top:1px solid var(--line);padding:32px 0 40px;font-size:14px;color:var(--muted)}
+footer .wrap{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px 32px}
+footer .links{display:flex;flex-wrap:wrap;gap:8px 24px}
+footer a{text-decoration:none}
+footer a:hover{color:var(--text)}
+footer .brand{font-size:15px;color:var(--text)}
+footer .brand svg{width:20px;height:20px}
+footer .note{flex-basis:100%;font-size:13px;color:var(--faint)}
+
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:6px}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.btn{transition:none}.btn:hover{transform:none}}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="Padakan home">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#ff5a1f"/><path d="M9 23V9h8a5 5 0 0 1 0 10h-8" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="23" cy="23" r="2.4" fill="#fff"/></svg>
+      Padakan
+    </a>
+    <div class="nav-links">
+      <a class="hide-sm" href="#how">How it works</a>
+      <a class="hide-sm" href="#features">Features</a>
+      <a class="hide-sm" href="#start">Get started</a>
+      <a class="btn btn-primary btn-sm" href="https://github.com/Rouxxel/Padakan">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.05-.71.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.25.73-1.54-2.55-.29-5.24-1.28-5.24-5.68 0-1.25.45-2.28 1.18-3.08-.12-.29-.51-1.46.11-3.04 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.62 1.58.23 2.75.11 3.04.74.8 1.18 1.83 1.18 3.08 0 4.41-2.69 5.38-5.25 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5Z"/></svg>
+        GitHub
+      </a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="wrap">
+    <a class="pill" href="https://github.com/Rouxxel/Padakan"><b>Open source</b> Apache 2.0 · Claude Code</a>
+    <h1>Autonomous development you can <span>trust</span>.</h1>
+    <p class="sub">Approve the plan once. Agents build, verify and ship in their own sandboxes, and a change reaches production only when the system, not a human reviewer, has proven it safe.</p>
+    <div class="cta">
+      <a class="btn btn-accent" href="https://github.com/Rouxxel/Padakan">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.05-.71.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.25.73-1.54-2.55-.29-5.24-1.28-5.24-5.68 0-1.25.45-2.28 1.18-3.08-.12-.29-.51-1.46.11-3.04 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.62 1.58.23 2.75.11 3.04.74.8 1.18 1.83 1.18 3.08 0 4.41-2.69 5.38-5.25 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5Z"/></svg>
+        View on GitHub
+      </a>
+      <a class="btn btn-secondary" href="#how">See how it works</a>
+    </div>
+    <div class="install" aria-label="Install command"><span>$</span><code>/plugin install padakan --marketplace Rouxxel/Padakan</code></div>
+
+    <div class="facts" role="list">
+      <div role="listitem"><b>1</b><span>human approval, up front</span></div>
+      <div role="listitem"><b>10</b><span>stages every task passes</span></div>
+      <div role="listitem"><b>0</b><span>models deciding what ships</span></div>
+      <div role="listitem"><b>100%</b><span>of steps on a signed audit trail</span></div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section style="padding-top:24px">
+    <div class="wrap problem">
+      <div>
+        <span class="label">The problem</span>
+        <h2>Getting a plausible change from an agent is solved. Shipping it is not.</h2>
+        <p>Nobody merges and deploys an agent's change without reading it first. So a human stays in the loop, the loop becomes the bottleneck, and the autonomy quietly disappears.</p>
+      </div>
+      <blockquote class="quote">It is a trust problem, not a capability problem. Padakan puts the trust in the system around the agent, so the agent itself can be any agent.</blockquote>
+    </div>
+  </section>
+
+  <section id="how" class="section-soft">
+    <div class="wrap">
+      <div class="center">
+        <span class="label">How it works</span>
+        <h2>Plan once. Then every task flows on its own.</h2>
+        <p class="lead">Each dot is a task. It moves through the top row, ships, and comes back as a new task when production shows a defect. Red dots leave the line for a human. Amber dots stop for a cost decision.</p>
+      </div>
+      <div class="diagram">
+        <img src="pipeline.svg" alt="Animated diagram: plan gate, resolver, cost gate, sandbox tree, gates, PR and evidence, orchestrator, gated deploy, production and monitor loop, over a signed audit trail" width="1280" height="640">
+      </div>
+      <div class="diagram-meta">
+        <div class="legend">
+          <span><i style="background:#2563eb"></i>tasks in flight</span>
+          <span><i style="background:#dc2626"></i>escalated to a human</span>
+          <span><i style="background:#d97706"></i>cost decision</span>
+          <span><i style="background:#7c3aed"></i>audit trail</span>
+        </div>
+        <a href="pipeline.svg">Open the diagram full size</a>
+      </div>
+
+      <ol class="steps">
+        <li class="gate"><div><h3>Plan gate <small>you, once</small></h3><p>You approve the PRD, the task plan with acceptance criteria, the budget and the brand. Once. It is the only approval.</p></div></li>
+        <li><div><h3>Resolver <small>Nemotron or a local model</small></h3><p>A model picks each task's tools, platform and verify kit (MCP servers, CLIs) from a fixed registry, with a cost range.</p></div></li>
+        <li class="gate"><div><h3>Cost gate <small>arithmetic, then you</small></h3><p>The worst case is checked against the budget left. Over budget, only that task pauses and you get a decision report.</p></div></li>
+        <li><div><h3>Sandbox tree <small>the agent</small></h3><p>One sandbox per task, a Devin session or a Daytona box. The agent plans, builds, reviews and tests in a loop. It never asks; it decides by rule or reports blocked.</p></div></li>
+        <li class="gate"><div><h3>Gates <small>code, never a model</small></h3><p>Proven twice: the task's tests and every acceptance criterion live. No regressions. Deterministic diff inspection. Valid documents.</p></div></li>
+        <li><div><h3>PR and evidence <small>the verifier</small></h3><p>A video of the change working, the architecture of the change, the files touched from git, tests and CI, each re-checked at its source.</p></div></li>
+        <li><div><h3>Orchestrator <small>the orchestrator</small></h3><p>Merges a verified head, one change at a time. Unclear verdicts become a ticket for a human, never a guess.</p></div></li>
+        <li class="gate"><div><h3>Gated deploy <small>code</small></h3><p>Behind a flag, then a canary. When the error rate passes the SLO, it rolls back by itself.</p></div></li>
+        <li><div><h3>Production <small>live</small></h3><p>The change is live, and every decision that put it there is on the record.</p></div></li>
+        <li><div><h3>Monitor loop <small>a model, then rules</small></h3><p>Logs are clustered and triaged. Fixable defects become new tasks; security and anything uncertain go to a human.</p></div></li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="features">
+    <div class="wrap">
+      <span class="label">Why you can trust it</span>
+      <h2>The agent is a black box. Everything around it is not.</h2>
+      <p class="lead">Swap the agent for any other. The confidence comes from checks that do not depend on it.</p>
+      <div class="features">
+        <div class="feature">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4z"/><path d="M9 12l2 2 4-4"/></svg></div>
+          <h3>Code decides what ships</h3>
+          <p>Diff size, protected paths, secrets and dependencies are checked by rules. A model may advise; it never decides.</p>
+        </div>
+        <div class="feature">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M6 8.5v7M18 15.5V11a3 3 0 0 0-3-3h-4"/><path d="M13 5.5L10.5 8 13 10.5"/></svg></div>
+          <h3>Effects, not claims</h3>
+          <p>"Done" means a commit on the remote, a PR whose head is that commit, and green CI. A status field alone means nothing.</p>
+        </div>
+        <div class="feature">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9L2.4 17.5A2 2 0 0 0 4.1 20.5h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></div>
+          <h3>Unclear means a human</h3>
+          <p>Any gate that does not clearly pass escalates. Deploys roll back on their own. Nothing is ever guessed.</p>
+        </div>
+        <div class="feature">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg></div>
+          <h3>A signed audit trail</h3>
+          <p>Every step is hash-chained and signed. Edit or delete one entry and verification fails at that line. Any decision can be replayed.</p>
+        </div>
+        <div class="feature">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M13 15h4"/></svg></div>
+          <h3>Headless by design</h3>
+          <p>After the plan gate the only question is about money. Agents look things up, decide by rule, or report blocked.</p>
+        </div>
+        <div class="feature">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg></div>
+          <h3>Readable by anyone</h3>
+          <p>Every brief, report and decision is an Open Knowledge Format document, kept in a records folder next to your repository.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="start" class="section-soft">
+    <div class="wrap start">
+      <div>
+        <span class="label">Get started</span>
+        <h2>Three commands to a shipped task.</h2>
+        <p class="lead">Install the plugin, onboard your repository, approve one plan. From there the task runs unattended.</p>
+        <a class="btn btn-secondary" href="https://github.com/Rouxxel/Padakan/blob/main/documentation/tech_docs/ARCHITECTURE.md">Read the architecture</a>
+      </div>
+      <div class="terminal" role="region" aria-label="Commands">
+        <div class="bar" aria-hidden="true"><i></i><i></i><i></i></div>
+<pre><span class="c"># install the plugin in Claude Code</span>
+<span class="k">/plugin install</span> padakan --marketplace Rouxxel/Padakan
+
+<span class="c"># once per repository: records folder, settings, checks</span>
+<span class="k">/padakan:onboard</span>
+
+<span class="c"># the one human gate</span>
+<span class="k">/padakan:plan</span> "export the dashboard as CSV"
+
+<span class="c"># from here on, unattended</span>
+<span class="k">/padakan:build</span> PAD-12</pre>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap center">
+      <span class="label">Built with</span>
+      <h2>Open models, real sandboxes, plain files.</h2>
+      <div class="stack" style="margin-top:32px">
+        <span><b>Claude Code</b> plugin</span>
+        <span><b>Nebius Token Factory</b> models</span>
+        <span><b>NVIDIA Nemotron</b> decisions</span>
+        <span><b>Devin</b> sessions</span>
+        <span><b>Daytona</b> sandboxes</span>
+        <span><b>herdr</b> terminal</span>
+        <span><b>Entire</b> context</span>
+        <span><b>Playwright</b> and DevTools MCP</span>
+        <span><b>Open Knowledge Format</b> docs</span>
+        <span><b>Node 22</b>, zero dependencies</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="closing" style="padding-top:0">
+    <div class="wrap">
+      <div class="box">
+        <span class="label">Open source · Apache 2.0</span>
+        <h2>Let your repository ship its own changes, and sleep at night.</h2>
+        <p>The architecture, the plugin and every test are on GitHub.</p>
+        <div class="cta">
+          <a class="btn btn-accent" href="https://github.com/Rouxxel/Padakan">View on GitHub</a>
+          <a class="btn btn-secondary" href="https://github.com/Rouxxel/Padakan/blob/main/documentation/tech_docs/ARCHITECTURE.md">Read the architecture</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="Padakan home">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#ff5a1f"/><path d="M9 23V9h8a5 5 0 0 1 0 10h-8" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="23" cy="23" r="2.4" fill="#fff"/></svg>
+      Padakan
+    </a>
+    <div class="links">
+      <a href="https://github.com/Rouxxel/Padakan">GitHub</a>
+      <a href="https://github.com/Rouxxel/Padakan/blob/main/documentation/tech_docs/ARCHITECTURE.md">Architecture</a>
+      <a href="https://github.com/Rouxxel/Padakan/blob/main/LICENSE">Apache 2.0</a>
+    </div>
+    <span class="note">Started at the AI Hackathon with Nebius and NVIDIA, Berlin, October 2026.</span>
+  </div>
+</footer>
+
+</body>
+</html>
