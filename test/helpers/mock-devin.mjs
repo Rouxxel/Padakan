@@ -148,7 +148,7 @@ export async function startMockDevin({ orgId = 'org-test', apiKey = 'cog_test_ke
     },
     messagesOf: (id) => messages.get(id),
     addAttachment(id, name, content, { host = origin } = {}) {
-      const path = `/files/${++seq}/${name}`;
+      const path = `/files/${++seq}/${encodeURIComponent(name)}`;
       files.set(path, Buffer.from(content));
       const att = { attachment_id: `att-${seq}`, name, url: `${host}${path}` };
       attachments.get(id).push(att);

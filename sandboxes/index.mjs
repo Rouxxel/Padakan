@@ -9,7 +9,7 @@
 import { readFile, writeFile, readdir, rm, mkdir, rename } from 'node:fs/promises';
 import { existsSync, readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { SETTINGS } from '../orchestrator/lib/env.mjs';
 import { validate } from '../core/schema.mjs';
 import { VERBS, LIVE_STATES, UnsupportedVerb, SandboxError, assertId, checkProvider, secretValues, findSecret } from './contract.mjs';
@@ -21,7 +21,7 @@ async function loadProviderModule(name) {
   if (!/^[a-z][a-z0-9-]*$/.test(name)) throw new SandboxError(`invalid provider name "${name}"`);
   const file = join(HERE, name, 'provider.mjs');
   if (!existsSync(file)) throw new SandboxError(`no sandbox provider "${name}" (expected ${file})`, { code: 'NO_PROVIDER' });
-  const mod = await import(file);
+  const mod = await import(pathToFileURL(file).href);
   const problems = checkProvider(mod, name);
   if (problems.length) throw new SandboxError(`provider "${name}" breaks the contract: ${problems.join('; ')}`, { code: 'BAD_PROVIDER' });
   return mod;
