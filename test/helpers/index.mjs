@@ -10,9 +10,10 @@ export const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 // Tests never start the real claude or herdr: stubs go first on PATH for every test process.
 // claude logs its arguments to $PADAKAN_STUB_LOG, sleeps $PADAKAN_STUB_SLEEP seconds and exits
-// with $PADAKAN_STUB_EXIT; herdr logs and exits 0.
+// with $PADAKAN_STUB_EXIT; herdr logs and exits 0; daytona logs its HOME and arguments.
 export const STUB_BIN = mkdtempSync(join(tmpdir(), 'padakan-stubs-'));
 writeFileSync(join(STUB_BIN, 'claude'), '#!/bin/sh\necho "claude $*" >> "${PADAKAN_STUB_LOG:-/dev/null}"\nsleep "${PADAKAN_STUB_SLEEP:-0}"\nexit "${PADAKAN_STUB_EXIT:-0}"\n', { mode: 0o755 });
+writeFileSync(join(STUB_BIN, 'daytona'), '#!/bin/sh\necho "HOME=$HOME daytona $*" >> "${PADAKAN_STUB_LOG:-/dev/null}"\nexit "${PADAKAN_STUB_EXIT:-0}"\n', { mode: 0o755 });
 writeFileSync(join(STUB_BIN, 'herdr'), '#!/bin/sh\necho "herdr $*" >> "${PADAKAN_STUB_LOG:-/dev/null}"\nexit 0\n', { mode: 0o755 });
 process.env.PATH = `${STUB_BIN}:${process.env.PATH}`;
 

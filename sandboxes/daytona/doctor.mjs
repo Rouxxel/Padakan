@@ -1,25 +1,18 @@
 // Onboarding checks for the Daytona provider. Loaded by orchestrator/doctor.mjs when
 // PADAKAN_SANDBOX_PROVIDER=daytona. Returns [{ name, ok, level?, detail }]; never prints a secret.
 
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
-
-const run = promisify(execFile);
+import { runDaytona, profileHome } from './cli.mjs';
 
 const okRow = (name, detail) => ({ name, ok: true, detail });
 const failRow = (name, detail) => ({ name, ok: false, level: 'fail', detail });
 const warnRow = (name, detail) => ({ name, ok: false, level: 'warn', detail });
 
 async function defaultRun(ctx, args) {
-  const env = { ...process.env };
-  if (ctx.settings?.DAYTONA_API_KEY) env.DAYTONA_API_KEY = ctx.settings.DAYTONA_API_KEY;
-  if (ctx.settings?.DAYTONA_API_URL) env.DAYTONA_API_URL = ctx.settings.DAYTONA_API_URL;
   try {
-    const { stdout, stderr } = await run('daytona', args, { timeout: 60_000, env });
-    return { code: 0, stdout, stderr };
+    return await runDaytona(ctx, args, { timeout: 60_000 });
   } catch (e) {
-    if (e.code === 'ENOENT') return { code: 127, stdout: '', stderr: 'not installed' };
-    return { code: typeof e.code === 'number' ? e.code : 1, stdout: e.stdout || '', stderr: e.stderr || '' };
+    if (e.code === 'NO_CLI') return { code: 127, stdout: '', stderr: 'not installed' };
+    return { code: 1, stdout: '', stderr: e.message };
   }
 }
 
@@ -36,10 +29,14 @@ export async function doctor(ctx) {
   }
   rows.push(v.code === 0 ? okRow('cli', v.stdout.trim().split('\n')[0] || 'installed') : warnRow('cli', 'daytona version failed'));
 
-  // 2. auth: an API key in .env, or a CLI login; `daytona list` proves either.
+  // 2. auth: only DAYTONA_API_KEY, on Padakan's own CLI profile (never the machine's daytona login).
+  if (!s.DAYTONA_API_KEY) {
+    rows.push(failRow('auth', 'DAYTONA_API_KEY is not set in <records>/.env (Padakan never uses the machine\'s own daytona login)'));
+    return rows;
+  }
   const list = await cli(['list']);
-  if (list.code === 0) rows.push(okRow('auth', s.DAYTONA_API_KEY ? 'DAYTONA_API_KEY accepted' : 'CLI login accepted'));
-  else rows.push(failRow('auth', s.DAYTONA_API_KEY ? 'daytona list failed with DAYTONA_API_KEY: the key is wrong or revoked' : 'not logged in: set DAYTONA_API_KEY in <records>/.env or run `daytona login`'));
+  if (list.code === 0) rows.push(okRow('auth', `DAYTONA_API_KEY accepted (profile ${profileHome(ctx)})`));
+  else rows.push(failRow('auth', 'daytona list failed with DAYTONA_API_KEY: the key is wrong or revoked'));
 
   // 3. the snapshot every tree is created from
   const snap = s.DAYTONA_SNAPSHOT || 'padakan-base';
