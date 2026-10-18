@@ -208,7 +208,7 @@ td code{white-space:nowrap}
         <div><dt>Sub-agents</dt><dd>14, none can call another</dd></div>
         <div><dt>Commands</dt><dd>11 under <code>/padakan:</code></dd></div>
         <div><dt>Sandbox providers</dt><dd>3: devin (default), daytona, local</dd></div>
-        <div><dt>Settings</dt><dd>52 variables, all in <code>.env</code></dd></div>
+        <div><dt>Settings</dt><dd>57 variables, all in <code>.env</code></dd></div>
         <div><dt>Built today</dt><dd>docs, diagrams, 3 templates</dd></div>
       </dl>
       <div class="legend" role="group" aria-label="Diagram colours">
@@ -482,7 +482,7 @@ td code{white-space:nowrap}
             <ul>
               <li data-c="orch"><div class="row"><span class="nm d-orch">.claude-plugin/</span><span class="why"><span class="loc">2 files</span><code>plugin.json</code> and a local <code>marketplace.json</code>. <span class="f f-new">planned</span></span></div></li>
               <li data-c="orch" data-p="1"><div class="row"><span class="nm d-orch">CLAUDE.md</span><span class="why">The orchestrator's rules: decide, dispatch, merge, deploy, record; delegate the rest. <span class="f f-new">planned</span></span></div></li>
-              <li data-c="orch" data-p="1"><div class="row"><span class="nm d-orch">.env.example</span><span class="why">All 52 settings, documented. Never holds values. <span class="f f-new">planned</span></span></div></li>
+              <li data-c="orch" data-p="1"><div class="row"><span class="nm d-orch">.env.example</span><span class="why">All 57 settings, documented. Never holds values. <span class="f f-new">planned</span></span></div></li>
               <li data-c="orch" data-p="1"><div class="row"><span class="nm dir d-orch">commands/</span><span class="why"><span class="loc">11</span>onboard · plan · build · watch · decide · feature · evidence · status · replay · pause · rollback. Thin: each follows the scripts. <span class="f f-new">planned</span></span></div></li>
               <li data-c="agent" data-p="1"><div class="row"><span class="nm dir d-agent">agents/</span><span class="why"><span class="loc">14</span>One file per sub-agent. None has the Task tool. <span class="f f-new">planned</span></span></div></li>
               <li data-c="agent record"><div class="row"><span class="nm dir d-agent">skills/</span><span class="why"><span class="loc">13</span>okf · no-questions · cost-gate · escalation · entire-context · feature-docs · e2e-playbook · evidence-pack · triage-categories · verify-web · verify-ios · verify-android · verify-backend. <span class="f f-new">planned</span></span></div></li>
@@ -567,7 +567,7 @@ PASS. See [the record](./record.md) and [the brief](./brief.md).</code></pre>
     <section class="ch" id="env">
       <header>
         <span class="chno">09 · EVERYTHING IN .ENV</span>
-        <h2>52 settings, one place, validated on load</h2>
+        <h2>57 settings, one place, validated on load</h2>
         <p class="sub">Load order, first value wins: exported environment, then <code>&lt;repo&gt;-padakan/.env</code>, then the plugin <code>.env</code>. An unknown or malformed key fails loudly.</p>
       </header>
       <div class="scroll">
@@ -577,14 +577,14 @@ PASS. See [the record](./record.md) and [the brief](./brief.md).</code></pre>
             <tr><td>General</td><td class="num">5</td><td>language (<code>en</code>), records folder name and path, tracker</td></tr>
             <tr><td>Terminal and driver</td><td class="num">3</td><td>herdr as terminal and driver (headless for CI)</td></tr>
             <tr><td>Sandboxes</td><td class="num">11</td><td>provider (devin · daytona · local), trees at once, Daytona snapshot, size, timers</td></tr>
-            <tr><td>Agents and models</td><td class="num">15</td><td>harness, tree model, Claude tokens, Nebius key and URL, per-role models, Devin keys, platform, ACU cap, approvals, playbook</td></tr>
+            <tr><td>Agents and models</td><td class="num">19</td><td>harness, tree model, Claude tokens, Nebius key and URL, per-role models, Devin URL, keys, platform, mode, ACU cap, approvals, playbook, polling, continuation</td></tr>
             <tr><td>Git</td><td class="num">4</td><td>GitHub token source, commit identity</td></tr>
             <tr><td>Context</td><td class="num">3</td><td>Entire on or off, search on or off, repo</td></tr>
             <tr><td>Gates</td><td class="num">3</td><td>protected paths, max diff lines and files</td></tr>
-            <tr><td>Cost</td><td class="num">3</td><td>budget caps per run, task, step</td></tr>
+            <tr><td>Cost</td><td class="num">4</td><td>budget caps per run, task, step; the Devin ACU price</td></tr>
             <tr><td>Monitor</td><td class="num">2</td><td>cron interval, log sources</td></tr>
             <tr><td>Deploy</td><td class="num">3</td><td>target, canary percent, SLO error rate</td></tr>
-            <tr><td><strong>Total</strong></td><td class="num"><strong>52</strong></td><td>Every variable with its default: <code>PLUGIN-STRUCTURE.md</code> §5</td></tr>
+            <tr><td><strong>Total</strong></td><td class="num"><strong>57</strong></td><td>Every variable with its default: <code>PLUGIN-STRUCTURE.md</code> §5</td></tr>
           </tbody>
         </table>
       </div>
