@@ -1,5 +1,5 @@
 - Open source repository
 - Public GitHub repository with the full source code
-- Comprehensive README with setup & installation steps
-- Documentation of all APIs, frameworks & tools used
-- Enough technical docs for thorough jury evaluation
+- Comprehensive README with setup & installation steps -> README.md
+- Documentation of all APIs, frameworks & tools used -> documentation/infrastructure/*
+- Enough technical docs for thorough jury evaluation -> documentation/tech_docs/*
