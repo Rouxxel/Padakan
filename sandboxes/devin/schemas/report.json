@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$comment": "Structured output a Devin session must return: the machine-readable CI= PR= ACS= EVIDENCE= BLOCKED= report, plus the seven-section record at retire. Self-contained (no $ref), as the Devin API requires. Every field is a claim the verifier re-checks.",
+  "type": "object",
+  "required": ["task", "pr_url", "branch", "acs", "evidence", "blocked"],
+  "additionalProperties": false,
+  "properties": {
+    "task": { "type": "string", "pattern": "^[A-Z]+-[0-9]+$" },
+    "pr_url": { "type": "string" },
+    "branch": { "type": "string" },
+    "head_sha": { "type": "string" },
+    "ci": { "type": "string", "enum": ["pass", "fail", "pending", "none"] },
+    "acs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "verdict"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^AC[0-9]+$" },
+          "verdict": { "type": "string", "enum": ["pass", "fail", "not_exercised"] },
+          "note": { "type": "string" }
+        }
+      }
+    },
+    "evidence": { "type": "array", "items": { "type": "string" } },
+    "blocked": { "type": ["string", "null"] },
+    "record": {
+      "type": "object",
+      "required": ["what_changed", "files", "architecture", "seams", "next_step", "misreadings", "open"],
+      "properties": {
+        "what_changed": { "type": "string" },
+        "files": { "type": "string" },
+        "architecture": { "type": "string" },
+        "seams": { "type": "string" },
+        "next_step": { "type": "string" },
+        "misreadings": { "type": "string" },
+        "open": { "type": "string" }
+      }
+    }
+  }
+}
