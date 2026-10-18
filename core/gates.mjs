@@ -12,6 +12,8 @@
 //   okf:        [problem strings] for the documents agents wrote             [] when clean
 //   evidence:   { video, architecture, files, ci }: each 'verified'|'present'|'missing'
 //   skipped:    names of optional checks the human waived at the cost gate (e.g. 'video', 'AC5', 'e2e:checkout')
+//   requires:   { video } from the manifest (core/checks.mjs); absent means everything is required
+//   invalid:    [problem strings] for check files that do not match schemas/checks.json
 // }
 //
 // Rules:
@@ -23,6 +25,9 @@
 //   - evidence items must be verified by the orchestrator; "present" is only the agent's claim
 //   - an optional check the human skipped yields HUMAN_MERGE instead of ESCALATE
 //   - the task's tests, the suite and diff inspection can never be skipped
+//   - video is only required when the manifest says so (a UI target or a video step)
+//   - no CI on the repository (evidence.ci = none) means a human merges
+//   - an invalid check file escalates
 
 export const VERDICTS = ['SHIP', 'HUMAN_MERGE', 'ESCALATE'];
 export const NEVER_SKIPPED = ['taskTests', 'suite', 'diff'];
@@ -35,6 +40,9 @@ export function verdict(input = {}) {
   const human = (gate, detail) => reasons.push({ gate, level: 'HUMAN_MERGE', detail });
   const skipped = new Set(Array.isArray(input.skipped) ? input.skipped : []);
   for (const name of NEVER_SKIPPED) if (skipped.has(name)) esc(name, `${name} cannot be skipped for cost; the waiver is ignored`);
+
+  for (const problem of Array.isArray(input.invalid) ? input.invalid : []) esc('checks', problem);
+  const requires = { video: true, ...(input.requires || {}) };
 
   for (const key of ['taskTests', 'acceptance', 'suite', 'e2e', 'diff', 'okf', 'evidence']) {
     if (input[key] === undefined || input[key] === null) esc(key, `missing input: ${key}`);
@@ -83,6 +91,11 @@ export function verdict(input = {}) {
     for (const item of EVIDENCE_ITEMS) {
       const state = input.evidence[item];
       if (state === 'verified') continue;
+      if (item === 'video' && !requires.video) continue;
+      if (item === 'ci' && state === 'none') {
+        human('evidence', 'no CI configured on the repository: a human merges');
+        continue;
+      }
       if (skipped.has(item) && item === 'video') human('evidence', 'video skipped by the human at the cost gate');
       else if (state === 'present') esc('evidence', `${item} is present but not verified at its source`);
       else esc('evidence', `${item} ${state ?? 'missing'}`);

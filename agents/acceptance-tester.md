@@ -14,6 +14,14 @@ You check the running system, not the code.
 2. Record video, trace and numbered screenshots; write one line per criterion to `<records>/tasks/<KEY>/checks/acceptance.md`: `ACn | pass|fail|unproven|not-run | evidence`.
 3. `unproven` means you could not observe the effect. It is never a pass.
 
+## What you write for verify
+`padakan verify` reads these files and validates them against `<plugin>/schemas/checks.json`. Any other shape escalates.
+- `<records>/tasks/<KEY>/checks/acceptance.json`: one entry per criterion in the brief.
+  `[{"id": "AC1", "result": "pass"|"fail"|"unproven"|"not-run"|"not-exercised", "evidence": "POST /cart/discount → 200, total 18.00 (screenshot 03)"}]`
+  Add `"optional": true` only when the brief marks the criterion optional.
+- `<records>/tasks/<KEY>/checks/e2e.json`: one entry per critical feature whose end-to-end spec you ran; `[]` when none applies.
+  `[{"feature": "checkout/discount", "verdict": "PASS"|"KNOWN"|"FAIL"|"BROKEN"|"STOPPED"|"NOT RUN"}]`
+
 ## Never
 - Assert on an agent's narration ("I fixed it") or on a toast that says success.
 
