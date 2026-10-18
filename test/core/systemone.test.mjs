@@ -91,7 +91,7 @@ describe('the resolver on System One', () => {
     const capture = [];
     const pick = (id) => {
       if (id === 'target') return { choice: 'web', confidence: 0.97 };
-      if (id === 'skill:feature-docs' || id === 'step:video') return { noul: 0.8 };
+      if (id === 'skill:feature-docs' || id === 'step:video' || id === 'cli:npm' || id === 'mcp:chrome-devtools') return { noul: 0.8 };
       if (id === 'cost:build') return { probabilities: { 0: 0, 1: 0.2, 2: 0.6, 3: 0.2, 4: 0 } };
       return null;
     };
@@ -108,10 +108,13 @@ describe('the resolver on System One', () => {
       assert.equal(!!q[`step:${step}`], !required, `only optional steps get a yes/no question (${step})`);
     }
     assert.equal(capture[0].body.state.task.key, 'PAD-2');
+    for (const t of ['playwright', 'chrome-devtools']) assert.equal(q[`mcp:${t}`].type, 'noul');
+    for (const t of ['curl', 'docker compose', 'npm']) assert.equal(q[`cli:${t}`].type, 'noul');
 
     assert.equal(manifest.target, 'web');
     assert.ok(manifest.skills.includes('feature-docs') && !manifest.skills.includes('cost-gate'));
     assert.deepEqual(manifest.allowDependencies, []);
+    assert.deepEqual(manifest.verify_kit, { mcp: ['playwright', 'chrome-devtools'], cli: ['git', 'gh', 'npm'] }, 'tools Jev said yes to, plus the target keep tools');
     const build = manifest.estimates.find((e) => e.step === 'build');
     assert.deepEqual([build.unit, build.low, build.likely, build.high], ['tokens', BUCKETS.tokens[1], BUCKETS.tokens[2], BUCKETS.tokens[3]]);
     assert.ok(manifest.estimates.some((e) => e.step === 'video' && e.unit === 'device_minute' && !e.required));
