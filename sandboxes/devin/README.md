@@ -61,4 +61,4 @@ Watch a tree live at its session URL (`padakan attach <KEY>` prints it).
 
 ## Tests
 
-`test/devin-client.test.mjs`, `test/devin-logic.test.mjs`, `test/devin-provider.test.mjs` and `test/devin-doctor.test.mjs` run against `test/helpers/mock-devin.mjs`, never the real API. The live checks still to run once against a real org are listed in IMPLEMENTATION-DEVIN-COSTGATE.md D.4.
+`test/sandboxes/devin/` (`client`, `logic`, `provider` and `doctor` `.test.mjs`) runs against `test/helpers/mock-devin.mjs`, never the real API. The live checks still to run once against a real org are listed in IMPLEMENTATION-DEVIN-COSTGATE.md D.4.

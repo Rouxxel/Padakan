@@ -3,10 +3,10 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { startMockDevin } from './helpers/mock-devin.mjs';
-import { ROOT } from './helpers.mjs';
-import { doctor } from '../sandboxes/devin/doctor.mjs';
-import { loadSettings } from '../orchestrator/lib/env.mjs';
+import { startMockDevin } from '../../helpers/mock-devin.mjs';
+import { ROOT } from '../../helpers/index.mjs';
+import { doctor } from '../../../sandboxes/devin/doctor.mjs';
+import { loadSettings } from '../../../orchestrator/lib/env.mjs';
 
 let mock;
 before(async () => {
