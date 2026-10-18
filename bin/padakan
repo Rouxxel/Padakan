@@ -3,15 +3,22 @@
 // Steps: init, gate, doctor, plant, attach, brief, poll, verify, evidence, merge, retire, recycle, status, ls
 
 import { buildContext } from '../orchestrator/lib/context.mjs';
-import { STEPS } from '../orchestrator/steps.mjs';
+import { STEPS, USAGE } from '../orchestrator/steps.mjs';
 import { doctor } from '../orchestrator/doctor.mjs';
 
 const ALL = { ...STEPS, doctor };
 const [step, ...args] = process.argv.slice(2);
 
+const usage = (s) => `padakan ${s}${USAGE[s] ? ` ${USAGE[s]}` : ''}`;
+
 if (!step || step === '--help' || step === 'help' || !ALL[step]) {
-  console.error(`usage: padakan <step> [args]\nsteps: ${Object.keys(ALL).sort().join(', ')}`);
+  console.error(['usage: padakan <step> [args]', ...Object.keys(ALL).sort().map((s) => `  ${usage(s)}`)].join('\n'));
   process.exit(step && step !== '--help' && step !== 'help' ? 2 : 0);
+}
+// A step that needs a task key, called without one: say how to call it.
+if ((USAGE[step] || '').startsWith('<KEY') && !args.some((a) => !a.startsWith('--'))) {
+  console.log(`ERROR="missing argument" USE="${usage(step)}"`);
+  process.exit(2);
 }
 
 try {
@@ -21,6 +28,9 @@ try {
   console.log(result.line);
   process.exit(result.code ?? 0);
 } catch (e) {
-  console.log(`ERROR=${JSON.stringify(e.message)} STEP=${step}`);
+  // A multi-line message (settings problems) prints its detail lines first, the result line last.
+  const [first, ...rest] = String(e.message).split('\n');
+  for (const line of rest) console.log(line);
+  console.log(`ERROR=${JSON.stringify(first)} STEP=${step}`);
   process.exit(1);
 }

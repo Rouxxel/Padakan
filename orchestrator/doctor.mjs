@@ -67,6 +67,13 @@ export async function doctor(ctx, { probe = defaultProbe } = {}) {
     const e = await probe('entire', ['--version']);
     add('entire', e.ok ? 'ok' : 'fail', e.out);
   }
+  // The tracker: GitHub Issues are filed on the origin repository, so it must be on GitHub.
+  if (s.PADAKAN_TRACKER === 'github' && ctx.repo) {
+    const origin = await probe('git', ['-C', ctx.repo, 'remote', 'get-url', 'origin']);
+    const onGithub = origin.ok && /github\.com[:/]/.test(origin.out);
+    add('tracker', onGithub ? 'ok' : 'warn', onGithub ? `github (${origin.out})` : `PADAKAN_TRACKER=github but origin is ${origin.ok ? origin.out : 'not set'}: issues cannot be filed; use PADAKAN_TRACKER=none or a GitHub origin`);
+  }
+
   // The resolver and triage models: needed by resolve and the monitor loop, not by the build steps.
   const problem = decisionProblem(s);
   add('decision-model', problem ? 'warn' : 'ok', problem ? `${problem} (resolve and triage need it)` : `${decisionProvider(s)} ${decisionEndpoint(s).baseUrl} (${decisionModel(s, 'resolver')})`);

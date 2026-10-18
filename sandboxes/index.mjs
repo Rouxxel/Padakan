@@ -132,9 +132,15 @@ export function openGateway(ctx, { providers = {}, now = () => new Date().toISOS
     return result;
   }
 
+  // Run a provider's preflight (what create would check) without creating anything.
+  async function preflight(name, opts = {}) {
+    const mod = await provider(name || settings?.PADAKAN_SANDBOX_PROVIDER);
+    return typeof mod.preflight === 'function' ? mod.preflight(ctx, opts) : { ok: true };
+  }
+
   const supports = async (id, verb) => (await provider((await get(id)).provider)).capabilities.includes(verb);
 
-  const api = { create, get, list, call, supports };
+  const api = { create, get, list, call, supports, preflight };
   for (const verb of VERBS) if (verb !== 'create') api[verb] = (id, ...args) => call(verb, id, ...args);
   return api;
 }

@@ -75,6 +75,22 @@ export async function resolve(ctx, args) {
   return ok(manifestLine(`tasks/${key}/manifest.json`, manifest));
 }
 
+// A remote sandbox gets its credentials first (seed), then its checkout (bootstrap). Returns a
+// failure result, or null when the tree is ready.
+async function prepare(ctx, key, id, branch, provider) {
+  for (const verb of ['seed', 'bootstrap']) {
+    if (!(await ctx.gateway.supports(id, verb))) continue;
+    try {
+      await ctx.gateway[verb](id);
+    } catch (e) {
+      await updateTask(ctx.records, key, { status: 'plant-failed', tree: id, branch, provider }, ctx.now);
+      await ctx.audit.append({ type: `tree.${verb}_failed`, task: key, tree: id, provider, summary: `tree ${id}: ${verb} failed` });
+      return fail(`TREE=${id} STATE=failed STEP=${verb}`, [e.message]);
+    }
+  }
+  return null;
+}
+
 // ── plant <KEY> [--provider p] [--base ref] ─────────────────────────────────────────────────────
 export async function plant(ctx, args) {
   const { pos, opt } = flags(args);
@@ -82,17 +98,8 @@ export async function plant(ctx, args) {
   const id = treeId(key);
   const branch = branchFor(key);
   const handle = await ctx.gateway.create(id, { task: key, branch, base: opt.base || 'HEAD', ...(opt.provider ? { provider: opt.provider } : {}) });
-  // A remote sandbox gets its credentials first (seed), then its checkout (bootstrap).
-  for (const verb of ['seed', 'bootstrap']) {
-    if (!(await ctx.gateway.supports(id, verb))) continue;
-    try {
-      await ctx.gateway[verb](id);
-    } catch (e) {
-      await updateTask(ctx.records, key, { status: 'plant-failed', tree: id, branch, provider: handle.provider }, ctx.now);
-      await ctx.audit.append({ type: `tree.${verb}_failed`, task: key, tree: id, provider: handle.provider, summary: `tree ${id}: ${verb} failed` });
-      return fail(`TREE=${id} STATE=failed STEP=${verb}`, [e.message]);
-    }
-  }
+  const failed = await prepare(ctx, key, id, branch, handle.provider);
+  if (failed) return failed;
   await updateTask(ctx.records, key, { status: 'planted', tree: id, branch, base: handle.base_sha || null, provider: handle.provider }, ctx.now);
   await ctx.audit.append({ type: 'tree.planted', task: key, tree: id, provider: handle.provider, summary: `tree ${id} planted on ${handle.provider}` });
   return ok(`TREE=${id} STATE=${handle.state} BRANCH=${branch}`);
@@ -259,19 +266,52 @@ export async function retire(ctx, args) {
   const r = await ctx.gateway.retire(handle.id, key);
   await updateTask(ctx.records, key, { status: 'retired', tree_state: r.destroyed ? 'gone' : handle.state }, ctx.now);
   await ctx.audit.append({ type: 'tree.retired', task: key, tree: handle.id, record: r.record || null, summary: `tree ${handle.id} retired` });
-  return ok(`TREE=${handle.id} RECORD=${r.record || 'none'} DESTROYED=${r.destroyed ? 'yes' : 'no'}`);
+  // RECORD=missing: the building agent left no .padakan/record.md to pull back.
+  return ok(`TREE=${handle.id} RECORD=${r.record || 'missing'} DESTROYED=${r.destroyed ? 'yes' : 'no'}`);
 }
 
 // ── recycle <KEY>: a wedged tree is replaced, never nursed. The remote branch is the asset. ─────
+// Order matters: nothing is destroyed until the new tree is known to be creatable, and work that is
+// only in the old tree (uncommitted or unpushed) is never discarded without --force.
 export async function recycle(ctx, args) {
-  const key = assertKey(args[0]);
+  const { pos, opt } = flags(args);
+  const key = assertKey(pos[0]);
   const { task, handle } = await taskTree(ctx, key);
   const sha = await ctx.github.remoteBranch(ctx.repo, task.branch);
   if (!sha) return fail(`RECYCLED=no REASON="branch ${task.branch} is not on the remote; nothing to recover from"`);
-  await ctx.gateway.destroy(handle.id, { force: true });
-  const fresh = await ctx.gateway.create(handle.id, { task: key, branch: task.branch, base: sha, provider: handle.provider });
+  try {
+    await ctx.gateway.preflight(handle.provider, { repo: ctx.repo, base: sha });
+  } catch (e) {
+    return fail(`RECYCLED=no REASON=${JSON.stringify(e.message)}`, ['the old tree was left as it is']);
+  }
+  try {
+    await ctx.gateway.destroy(handle.id, { force: opt.force === true });
+  } catch (e) {
+    if (e.code !== 'UNSAVED_WORK') throw e;
+    return fail(`RECYCLED=no REASON=${JSON.stringify(`${e.message}; commit and push it, or recycle ${key} --force to discard it`)}`);
+  }
+  await ctx.audit.append({ type: 'tree.destroyed', task: key, tree: handle.id, forced: opt.force === true, summary: `tree ${handle.id} destroyed to be recycled` });
+  let fresh;
+  try {
+    fresh = await ctx.gateway.create(handle.id, { task: key, branch: task.branch, base: sha, provider: handle.provider });
+  } catch (e) {
+    await updateTask(ctx.records, key, { status: 'plant-failed', tree_state: 'gone' }, ctx.now);
+    await ctx.audit.append({ type: 'tree.recycle_failed', task: key, tree: handle.id, summary: `recycling ${handle.id} failed after the old tree was destroyed` });
+    return fail(`RECYCLED=no TREE=gone REASON=${JSON.stringify(e.message)}`, [`the branch ${task.branch} is safe on the remote; padakan plant ${key} recreates the tree from it`]);
+  }
+  const failed = await prepare(ctx, key, handle.id, task.branch, handle.provider);
+  if (failed) return failed;
   await ctx.audit.append({ type: 'tree.recycled', task: key, tree: handle.id, from: sha, summary: `tree ${handle.id} recycled from ${sha.slice(0, 12)}` });
   return ok(`TREE=${fresh.id} RECYCLED=yes FROM=${sha.slice(0, 12)}`);
+}
+
+// ── audit [KEY]: verify the signed trail, or replay one task ────────────────────────────────────
+export async function audit(ctx, args) {
+  const r = await ctx.audit.verify();
+  const lines = [];
+  if (args[0]) for (const e of await ctx.audit.replay({ task: assertKey(args[0]) })) lines.push(`${e.seq}\t${e.ts}\t${e.event.type}\t${e.event.summary || ''}`);
+  if (!r.ok) return fail(`AUDIT=broken LINE=${r.broken.line} REASON=${JSON.stringify(r.broken.reason)}`, lines);
+  return ok(`AUDIT=ok ENTRIES=${r.count}`, lines);
 }
 
 // ── gate open|close: the plan gate is the only window in which the human may be asked ───────────
@@ -391,4 +431,13 @@ export async function ls(ctx) {
   return ok(`TREES=${handles.length}`, handles.map((h) => `${h.id}\t${h.provider}\t${h.state}\t${h.task || '-'}\t${h.url || h.path || '-'}`));
 }
 
-export const STEPS = { init, gate, pause, resolve, tick, deploy, rollback, plant, attach, brief, poll, verify, evidence, merge, retire, recycle, status, ls, ...DECISION_STEPS };
+export const STEPS = { init, gate, pause, resolve, tick, deploy, rollback, plant, attach, brief, poll, verify, evidence, merge, retire, recycle, status, ls, audit, ...DECISION_STEPS };
+
+// Arguments per step, for usage lines. A step whose usage starts with <KEY> needs a task key.
+export const USAGE = {
+  init: '', doctor: '', status: '', ls: '', tick: '', audit: '[KEY]',
+  gate: 'open|close', pause: '<KEY|all>',
+  resolve: '<KEY>', plant: '<KEY> [--provider p] [--base ref]', attach: '<KEY>', brief: '<KEY> <brief.md>', poll: '<KEY>',
+  verify: '<KEY>', evidence: '<KEY>', merge: '<KEY> [--approved-by name]', retire: '<KEY>', recycle: '<KEY> [--force]',
+  deploy: '<KEY>', rollback: '<KEY>',
+};

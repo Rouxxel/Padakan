@@ -36,8 +36,9 @@ async function exclude(worktree) {
   if (!text.split('\n').includes(`/${PADAKAN_DIR}/`)) await appendFile(file, `${text && !text.endsWith('\n') ? '\n' : ''}/${PADAKAN_DIR}/\n`);
 }
 
-// create(ctx, id, { repo, branch, base }) -> handle fields
-export async function create(ctx, id, { repo = ctx.repo, branch = `padakan/${id}`, base = 'HEAD', task } = {}) {
+// preflight(ctx, { repo, base }) -> { baseSha }: everything create needs, checked without changing
+// anything, so recycle can refuse before it destroys the old tree.
+export async function preflight(ctx, { repo = ctx.repo, base = 'HEAD' } = {}) {
   if (!repo) throw new SandboxError('local provider needs the repository path');
   const baseSha = await gitTry(repo, 'rev-parse', '--verify', `${base}^{commit}`);
   if (!baseSha) throw new SandboxError(`base "${base}" is not a commit in ${repo}`, { code: 'BAD_BASE' });
@@ -55,6 +56,12 @@ export async function create(ctx, id, { repo = ctx.repo, branch = `padakan/${id}
     const onRemote = await git(repo, 'branch', '-r', '--contains', baseSha);
     if (!onRemote) throw new SandboxError(`base ${baseSha.slice(0, 12)} is not on any remote; push it first`, { code: 'UNPUSHED_BASE' });
   }
+  return { baseSha };
+}
+
+// create(ctx, id, { repo, branch, base }) -> handle fields
+export async function create(ctx, id, { repo = ctx.repo, branch = `padakan/${id}`, base = 'HEAD', task } = {}) {
+  const { baseSha } = await preflight(ctx, { repo, base });
   const path = join(treesRoot(ctx.records), id);
   if (existsSync(path)) throw new SandboxError(`worktree path already exists: ${path}`, { code: 'EXISTS' });
   await mkdir(treesRoot(ctx.records), { recursive: true });

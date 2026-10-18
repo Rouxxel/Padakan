@@ -136,9 +136,11 @@ const gitHostTry = (cwd, ...args) => gitHost(cwd, ...args).catch(() => null);
 // ── create ──────────────────────────────────────────────────────────────────────────────────────
 
 // create(ctx, id, { repo, branch, base, task }) -> handle fields. Only public values reach the CLI.
-export async function create(ctx, id, { repo = ctx.repo, branch = `padakan/${id}`, base = 'HEAD', task } = {}) {
-  const s = ctx.settings || {};
+// preflight(ctx, { repo, base }) -> { baseSha, origin }: everything create needs, checked without
+// creating anything, so recycle can refuse before it destroys the old tree.
+export async function preflight(ctx, { repo = ctx.repo, base = 'HEAD' } = {}) {
   if (!repo) throw new SandboxError('the daytona provider needs the repository path');
+  if (!ctx.daytonaRun && !ctx.settings?.DAYTONA_API_KEY) throw new SandboxError('DAYTONA_API_KEY is not set in <records>/.env', { code: 'NO_DAYTONA_KEY' });
   const baseSha = await gitHostTry(repo, 'rev-parse', '--verify', `${base}^{commit}`);
   if (!baseSha) throw new SandboxError(`base "${base}" is not a commit in ${repo}`, { code: 'BAD_BASE' });
   const origin = await gitHostTry(repo, 'remote', 'get-url', 'origin');
@@ -146,7 +148,12 @@ export async function create(ctx, id, { repo = ctx.repo, branch = `padakan/${id}
   // The tree clones the base from the remote, so it must already be pushed there.
   const onRemote = await gitHostTry(repo, 'branch', '-r', '--contains', baseSha);
   if (!onRemote) throw new SandboxError(`base ${baseSha.slice(0, 12)} is not on any remote; push it first`, { code: 'UNPUSHED_BASE' });
+  return { baseSha, origin };
+}
 
+export async function create(ctx, id, { repo = ctx.repo, branch = `padakan/${id}`, base = 'HEAD', task } = {}) {
+  const s = ctx.settings || {};
+  const { baseSha, origin } = await preflight(ctx, { repo, base });
   const args = [
     'create', '--name', id,
     '--snapshot', s.DAYTONA_SNAPSHOT || 'padakan-base',
