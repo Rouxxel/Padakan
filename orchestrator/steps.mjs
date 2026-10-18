@@ -15,6 +15,8 @@ import { validateFile, validateBundle } from '../core/okf.mjs';
 import { inspect } from '../core/diffcheck.mjs';
 import { verdict, resultLine } from '../core/gates.mjs';
 import { resolve as resolveManifest, resultLine as manifestLine } from '../core/resolver.mjs';
+import { collect } from '../core/collect-logs.mjs';
+import { triage } from '../core/triage.mjs';
 
 const ok = (line, details) => ({ line, code: 0, details });
 const fail = (line, details) => ({ line, code: 1, details });
@@ -255,6 +257,78 @@ export async function pause(ctx, args) {
   return ok(`PAUSED=${keys.length} TREES_STOPPED=${stopped}`);
 }
 
+// ── tick: one monitor tick. Collect, cluster, triage, dedupe, open tasks, list escalations. ────────
+export async function tick(ctx, args) {
+  const state = await readState(ctx.records);
+  const now = ctx.now();
+  const id = now.replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z');
+  const since = state.monitor?.last_tick || new Date(Date.parse(now) - ctx.settings.PADAKAN_WATCH_INTERVAL_MIN * 60_000).toISOString();
+  const collected = await collect({ sources: ctx.settings.PADAKAN_LOG_SOURCES, since, ...(ctx.collectOptions || {}) });
+  const { items, usage } = await triage({ clusters: collected.clusters, client: collected.clusters.length ? ctx.models() : null, model: ctx.settings.PADAKAN_TRIAGE_MODEL, now: ctx.now });
+
+  const openByFp = new Map(
+    Object.entries(state.tasks || {})
+      .filter(([, t]) => t.fingerprint && !['merged', 'retired', 'done'].includes(t.status))
+      .map(([k, t]) => [t.fingerprint, k]),
+  );
+  const opened = [];
+  const human = [];
+  let dropped = 0;
+  for (const item of items) {
+    if (openByFp.has(item.fingerprint)) {
+      item.duplicate_of = openByFp.get(item.fingerprint);
+      continue;
+    }
+    if (item.route === 'task' || item.route === 'task-escalate') {
+      const key = `MON-${item.fingerprint.slice(0, 8)}`;
+      opened.push(key);
+      await updateTask(ctx.records, key, {
+        status: item.route === 'task' ? 'planned' : 'escalated',
+        source: 'monitor',
+        fingerprint: item.fingerprint,
+        title: item.summary,
+        severity: item.severity,
+        category: item.category,
+      }, ctx.now);
+    } else if (item.route === 'human') human.push(item);
+    else if (item.route === 'drop') dropped++;
+  }
+
+  const dir = join(ctx.records, 'monitor', id);
+  await mkdir(dir, { recursive: true });
+  await writeFile(join(dir, 'clusters.json'), `${JSON.stringify(collected, null, 2)}\n`);
+  await writeFile(join(dir, 'triage.json'), `${JSON.stringify({ items, usage }, null, 2)}\n`);
+  const rows = items.map((i) => `| \`${i.fingerprint}\` | ${i.count} | ${i.category} | ${i.severity} | ${i.route}${i.duplicate_of ? ` (open: ${i.duplicate_of})` : ''} | ${String(i.summary).replaceAll('|', '/')} |`);
+  await writeOkf(
+    join(dir, 'report.md'),
+    {
+      type: 'Monitor Report',
+      title: `Monitor tick ${id}`,
+      description: `${items.length} clusters since ${since}: ${opened.length} new tasks, ${human.length} for a human, ${dropped} dropped.`,
+      tags: ['monitor', 'triage'],
+      body: [
+        `# Monitor tick ${id}`,
+        '',
+        `Since ${since}. Events: ${collected.events}. Sources with errors: ${collected.errors.length}.`,
+        '',
+        '| Fingerprint | Count | Category | Severity | Route | Summary |',
+        '|---|---|---|---|---|---|',
+        ...rows,
+        '',
+        opened.length ? `New tasks: ${opened.join(', ')}.` : 'No new tasks.',
+        human.length ? `For a human: ${human.map((h) => `\`${h.fingerprint}\` (${h.category}${h.reasons.length ? `, ${h.reasons.join('; ')}` : ''})`).join(', ')}.` : '',
+        ...collected.errors.map((e) => `- Source ${e.source} failed: ${e.error}`),
+      ].join('\n'),
+    },
+    ctx.now,
+  );
+  await updateState(ctx.records, (st) => {
+    st.monitor = { ...(st.monitor || {}), last_tick: now };
+  });
+  await ctx.audit.append({ type: 'monitor.tick', tick: id, clusters: items.length, opened, human: human.length, summary: `monitor tick: ${items.length} clusters, ${opened.length} new tasks, ${human.length} for a human` });
+  return ok(`CLUSTERS=${items.length} FIXABLE=${opened.length ? opened.join(',') : 'none'} HUMAN=${human.length} DROPPED=${dropped} REPORT=monitor/${id}/report.md${collected.errors.length ? ` SOURCE_ERRORS=${collected.errors.length}` : ''}`);
+}
+
 // ── status / ls: read-only views ────────────────────────────────────────────────────────────────
 export async function status(ctx) {
   const s = await readState(ctx.records);
@@ -269,4 +343,4 @@ export async function ls(ctx) {
   return ok(`TREES=${handles.length}`, handles.map((h) => `${h.id}\t${h.provider}\t${h.state}\t${h.task || '-'}\t${h.url || h.path || '-'}`));
 }
 
-export const STEPS = { init, gate, pause, resolve, plant, attach, brief, poll, verify, evidence, merge, retire, recycle, status, ls };
+export const STEPS = { init, gate, pause, resolve, tick, plant, attach, brief, poll, verify, evidence, merge, retire, recycle, status, ls };

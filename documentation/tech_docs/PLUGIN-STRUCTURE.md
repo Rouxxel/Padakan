@@ -109,9 +109,10 @@ Padakan/                                  repo root = the plugin
 │   ├── lib/                              env.mjs (settings), records.mjs (records folder), state.mjs
 │   │                                     (state.json), github.mjs (remote and PR effects), context.mjs
 │   ├── steps.mjs                         the lifecycle steps, one function each: init, plant, attach,
-│   │                                     brief, poll, verify, evidence, merge, retire, recycle, status, ls
+│   │                                     brief, poll, verify, evidence, merge, retire, recycle, status, ls,
+│   │                                     gate, pause, resolve, tick
 │   ├── doctor.mjs                        environment checks, one CHECK line each, then DOCTOR=
-│   └── tick.mjs                          one monitor tick (issue #17)
+│   └── (tick is a step in steps.mjs: collect, triage, dedupe, open tasks)
 ├── bin/
 │   ├── padakan                           one entry point: `padakan <step> ...` → orchestrator/<step>.mjs
 │   └── padakan-run                       headless outer loop (fresh pass each time, caps in bash)
